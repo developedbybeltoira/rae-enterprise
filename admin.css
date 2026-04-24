@@ -1,0 +1,51 @@
+/* ── ADMIN PANEL ── */
+.admin-page { padding-top: 80px; padding-bottom: 60px; }
+
+.admin-tabs {
+  display: flex; gap: 4px; background: var(--glass);
+  border: 1px solid var(--glass-border); border-radius: var(--radius);
+  padding: 6px; margin-bottom: 28px; flex-wrap: wrap;
+}
+.admin-tab {
+  padding: 10px 20px; border-radius: var(--radius-sm);
+  font-size: 0.875rem; font-weight: 600; cursor: pointer;
+  transition: var(--transition); color: var(--text-muted);
+  border: none; background: transparent; font-family: var(--font-body);
+}
+.admin-tab.active {
+  background: linear-gradient(135deg, var(--neon-purple), #5B0FCC);
+  color: #fff; box-shadow: 0 2px 12px rgba(123,46,255,0.4);
+}
+
+.admin-table-wrap {
+  background: var(--glass); border: 1px solid var(--glass-border);
+  border-radius: var(--radius); overflow: hidden;
+}
+.admin-table {
+  width: 100%; border-collapse: collapse; font-size: 0.875rem;
+}
+.admin-table th {
+  padding: 14px 16px; text-align: left; font-size: 0.75rem;
+  font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--text-muted); background: rgba(123,46,255,0.05);
+  border-bottom: 1px solid var(--glass-border);
+}
+.admin-table td {
+  padding: 14px 16px; border-bottom: 1px solid rgba(123,46,255,0.08);
+  color: var(--text-primary); vertical-align: middle;
+}
+.admin-table tr:hover td { background: rgba(123,46,255,0.05); }
+.admin-table tr:last-child td { border-bottom: none; }
+
+.admin-img-preview { width: 48px; height: 48px; border-radius: 8px; object-fit: cover; }
+
+.status-select {
+  background: var(--glass); border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm); padding: 6px 10px;
+  color: var(--text-primary); font-family: var(--font-body); font-size: 0.8rem;
+  cursor: pointer; outline: none;
+}
+
+.product-form { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 600px) { .product-form { grid-template-columns: 1fr; } }
+.product-form .full-width { grid-column: 1/-1; }
