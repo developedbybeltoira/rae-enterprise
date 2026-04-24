@@ -108,7 +108,4 @@ function el(tag, attrs = {}, ...children) {
   return e;
 }
 
-function navigate(page, params = {}) {
-  window.history.pushState({ page, params }, '', `#${page}`);
-  window.dispatchEvent(new CustomEvent('routeChange', { detail: { page, params } }));
-}
+// navigate() is defined in script.js to avoid redeclaration conflicts
