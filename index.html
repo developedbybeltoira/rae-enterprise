@@ -1,8 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>Rae Enterprise ✨</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
@@ -545,6 +544,39 @@ body {
   .nav-search { display: none; }
   .nav-mobile-menu { display: flex; }
 }
+
+/* ── BOTTOM MOBILE NAV ── */
+#bottom-nav {
+  display: none;
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 890;
+  background: rgba(10,0,20,0.95);
+  backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(123,46,255,0.3);
+  padding: 8px 0 max(8px, env(safe-area-inset-bottom));
+  flex-direction: row; justify-content: space-around; align-items: center;
+}
+@media (max-width: 768px) {
+  #bottom-nav { display: flex; }
+  .home-page, .dashboard-page, .auth-page, .product-page { padding-bottom: 80px !important; }
+  #app { padding-bottom: 0; }
+}
+.bn-item {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  cursor: pointer; padding: 6px 12px; border-radius: 12px;
+  transition: all 0.2s; flex: 1; min-width: 0;
+}
+.bn-item:active { background: rgba(123,46,255,0.2); transform: scale(0.93); }
+.bn-item.active { background: rgba(123,46,255,0.15); }
+.bn-icon { font-size: 1.3rem; line-height: 1; }
+.bn-label { font-size: 0.62rem; font-weight: 600; color: rgba(240,230,255,0.6); letter-spacing: 0.03em; }
+.bn-cart .bn-icon { font-size: 1.5rem; }
+.bn-cart { background: rgba(123,46,255,0.1); border-radius: 16px; }
+
+[data-theme="light"] #bottom-nav {
+  background: rgba(240,232,255,0.95);
+  border-top-color: rgba(123,46,255,0.2);
+}
+[data-theme="light"] .bn-label { color: rgba(26,0,64,0.6); }
 
 /* ── AUTH PAGES ── */
 .auth-page {
@@ -1289,14 +1321,9 @@ input[type="checkbox"]:checked::after {
 .ldr-txt{font-family:"Dancing Script",cursive;font-size:2.2rem;color:#F0E6FF;animation:shimmer 1.5s ease-in-out infinite;}
 @keyframes spin{to{transform:rotate(360deg);}}
 @keyframes shimmer{0%,100%{text-shadow:0 0 20px #7B2EFF;}50%{text-shadow:0 0 40px #00F5FF,0 0 80px #7B2EFF;}}
-</style>
-</head>
-<body>
+</style></head><body>
 <div id="rae-loader"><div class="ldr-spin"></div><div class="ldr-txt">Rae Enterprise ✨</div></div>
-<div id="particles-bg"></div>
-<div id="app"></div>
-<div id="chatbot-widget"></div>
-<div id="toast-container"></div>
+<div id="particles-bg"></div><div id="app"></div><div id="chatbot-widget"></div><div id="toast-container"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 // ═══════════════════════════════════════════════════════
@@ -1482,142 +1509,174 @@ var Store = {
   isAdmin(){return !!(this.profile&&this.profile.role==='admin');}
 };
 
-// ═══════════════════════════════════════════════════════
-// RAE ENTERPRISE — Navbar
-// ═══════════════════════════════════════════════════════
+// RAE ENTERPRISE — Navbar + Bottom Mobile Nav
 
 function renderNavbar() {
-  const isLoggedIn = !!Store.user;
-  const initials = Store.profile?.username?.slice(0, 2).toUpperCase() || '??';
-  const isAdmin = Store.isAdmin();
+  var isLoggedIn = !!Store.user;
+  var initials = Store.profile && Store.profile.username ? Store.profile.username.slice(0,2).toUpperCase() : '??';
+  var isAdmin = Store.isAdmin();
 
-  const nav = document.getElementById('navbar') || (() => {
-    const n = document.createElement('nav');
-    n.id = 'navbar';
-    document.body.insertBefore(n, document.body.firstChild);
-    return n;
-  })();
+  // Create or get navbar
+  var nav = document.getElementById('navbar');
+  if (!nav) {
+    nav = document.createElement('nav');
+    nav.id = 'navbar';
+    document.body.insertBefore(nav, document.body.firstChild);
+  }
 
-  nav.innerHTML = `
-    <div class="nav-logo" onclick="navigate('home')">
-      <img src="logo.png" alt="Rae" onerror="this.style.display='none'" />
-      <span class="nav-logo-text">Rae Enterprise</span>
-    </div>
+  nav.innerHTML =
+    '<div class="nav-logo" onclick="navigate(\'home\')" style="cursor:pointer">' +
+    '<img src="logo.png" alt="Rae" onerror="this.style.display=\'none\'" />' +
+    '<span class="nav-logo-text">Rae Enterprise</span>' +
+    '</div>' +
 
-    <div class="nav-search">
-      <span class="nav-search-icon">🔍</span>
-      <input type="text" id="nav-search-input" placeholder="Search gorgeous finds..." autocomplete="off" />
-      <div class="search-dropdown hidden" id="search-dropdown"></div>
-    </div>
+    '<div class="nav-search">' +
+    '<span class="nav-search-icon">🔍</span>' +
+    '<input type="text" id="nav-search-input" placeholder="Search gorgeous finds..." autocomplete="off" />' +
+    '<div class="search-dropdown hidden" id="search-dropdown"></div>' +
+    '</div>' +
 
-    <div class="nav-actions">
-      ${isLoggedIn ? `
-        <button class="nav-icon-btn" onclick="navigate('cart')" title="Cart">
-          🛒
-          <span id="cart-badge" class="hidden">0</span>
-        </button>
-        <button class="nav-icon-btn" onclick="navigate('notifications')" title="Notifications">🔔</button>
-        <div class="nav-avatar-wrap">
-          <div class="nav-avatar" id="nav-avatar-btn">${initials}</div>
-          <div class="nav-dropdown hidden" id="nav-dropdown">
-            ${isAdmin ? `<div class="nav-dropdown-item" onclick="navigate('admin')">⚙️ Admin Panel</div>` : ''}
-            <div class="nav-dropdown-item" onclick="navigate('dashboard')">👤 My Account</div>
-            <div class="nav-dropdown-item" onclick="navigate('orders')">📦 My Orders</div>
-            <div class="nav-dropdown-item" onclick="navigate('referrals')">🎁 Referrals</div>
-            <div class="nav-dropdown-item" onclick="navigate('wallet')">💰 Wallet</div>
-            <div class="nav-dropdown-item danger" onclick="handleLogout()">🚪 Logout</div>
-          </div>
-        </div>
-      ` : `
-        <button class="btn btn-outline btn-sm" onclick="navigate('login')">Sign In</button>
-        <button class="btn btn-primary btn-sm" onclick="navigate('register')">Join Free ✨</button>
-      `}
-      <button class="theme-toggle" id="theme-toggle" title="Toggle theme"></button>
-    </div>
-  `;
+    '<div class="nav-actions">' +
+    (isLoggedIn ?
+      '<button class="nav-icon-btn" onclick="navigate(\'cart\')" title="Cart" style="position:relative">🛒' +
+      '<span id="cart-badge" style="display:none;position:absolute;top:-4px;right:-4px;background:#FF2EBD;color:#fff;font-size:0.65rem;font-weight:700;width:18px;height:18px;border-radius:50%;align-items:center;justify-content:center">0</span>' +
+      '</button>' +
+      '<button class="nav-icon-btn" onclick="navigate(\'notifications\')" title="Notifications">🔔</button>' +
+      '<div style="position:relative">' +
+      '<div class="nav-avatar" id="nav-avatar-btn">' + initials + '</div>' +
+      '<div class="nav-dropdown hidden" id="nav-dropdown">' +
+      (isAdmin ? '<div class="nav-dropdown-item" onclick="navigate(\'admin\')">⚙️ Admin Panel</div>' : '') +
+      '<div class="nav-dropdown-item" onclick="navigate(\'dashboard\')">👤 My Account</div>' +
+      '<div class="nav-dropdown-item" onclick="navigate(\'orders\')">📦 My Orders</div>' +
+      '<div class="nav-dropdown-item" onclick="navigate(\'referrals\')">🎁 Referrals</div>' +
+      '<div class="nav-dropdown-item" onclick="navigate(\'wallet\')">💰 Wallet</div>' +
+      '<div class="nav-dropdown-item danger" onclick="handleLogout()">🚪 Logout</div>' +
+      '</div></div>'
+    :
+      '<button class="btn btn-outline btn-sm" onclick="navigate(\'login\')">Sign In</button>' +
+      '<button class="btn btn-primary btn-sm" onclick="navigate(\'register\')">Join Free ✨</button>'
+    ) +
+    '<button class="theme-toggle" id="theme-toggle" title="Toggle theme"></button>' +
+    '</div>';
 
   // Theme toggle
-  document.getElementById('theme-toggle')?.addEventListener('click', () => {
-    const html = document.documentElement;
-    html.setAttribute('data-theme', html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
-  });
+  var themeBtn = document.getElementById('theme-toggle');
+  if (themeBtn) {
+    themeBtn.onclick = function() {
+      var html = document.documentElement;
+      html.setAttribute('data-theme', html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+    };
+  }
 
   // Avatar dropdown
-  document.getElementById('nav-avatar-btn')?.addEventListener('click', (e) => {
-    e.stopPropagation();
-    document.getElementById('nav-dropdown')?.classList.toggle('hidden');
-  });
-
-  document.addEventListener('click', () => {
-    document.getElementById('nav-dropdown')?.classList.add('hidden');
+  var avatarBtn = document.getElementById('nav-avatar-btn');
+  if (avatarBtn) {
+    avatarBtn.onclick = function(e) {
+      e.stopPropagation();
+      var dd = document.getElementById('nav-dropdown');
+      if (dd) dd.classList.toggle('hidden');
+    };
+  }
+  document.addEventListener('click', function() {
+    var dd = document.getElementById('nav-dropdown');
+    if (dd) dd.classList.add('hidden');
   });
 
   // Search
-  const searchInput = document.getElementById('nav-search-input');
-  const searchDrop = document.getElementById('search-dropdown');
-  if (searchInput) {
-    searchInput.addEventListener('input', debounce(async (e) => {
-      const q = e.target.value.trim();
-      if (q.length < 2) { searchDrop?.classList.add('hidden'); return; }
-      const { data } = await db.from('products').select('id,name,price,discount_price,images').ilike('name', `%${q}%`).limit(6);
-      if (!data?.length) { searchDrop?.classList.add('hidden'); return; }
-      searchDrop.innerHTML = data.map(p => `
-        <div class="search-item" onclick="navigate('product', { id: '${p.id}' })">
-          <img class="search-item-img" src="${p.images?.[0] || ''}" onerror="this.src='https://placehold.co/36x36/7B2EFF/fff?text=R'" />
-          <div>
-            <div class="search-item-name">${p.name}</div>
-            <div class="search-item-price">${formatNaira(p.discount_price || p.price)}</div>
-          </div>
-        </div>
-      `).join('');
-      searchDrop?.classList.remove('hidden');
+  var si = document.getElementById('nav-search-input');
+  var sd = document.getElementById('search-dropdown');
+  if (si && sd) {
+    si.addEventListener('input', debounce(async function(e) {
+      var q = e.target.value.trim();
+      if (q.length < 2) { sd.classList.add('hidden'); return; }
+      var res = await db.from('products').select('id,name,price,discount_price,images').ilike('name', '%'+q+'%').limit(6);
+      if (!res.data || !res.data.length) { sd.classList.add('hidden'); return; }
+      sd.innerHTML = res.data.map(function(p) {
+        return '<div class="search-item" onclick="navigate(\'product\',{id:\''+p.id+'\'})">' +
+          '<img class="search-item-img" src="'+(p.images&&p.images[0]||'')+'" onerror="this.src=\'https://placehold.co/36x36/7B2EFF/fff?text=R\'" />' +
+          '<div><div class="search-item-name">'+p.name+'</div>' +
+          '<div class="search-item-price">'+formatNaira(p.discount_price||p.price)+'</div></div></div>';
+      }).join('');
+      sd.classList.remove('hidden');
     }, 300));
-
-    document.addEventListener('click', (e) => {
-      if (!searchInput.contains(e.target)) searchDrop?.classList.add('hidden');
+    document.addEventListener('click', function(e) {
+      if (!si.contains(e.target)) sd.classList.add('hidden');
     });
   }
 
-  // Update cart badge
   Store.updateCartBadge();
+
+  // Render bottom nav for mobile when logged in
+  renderBottomNav(isLoggedIn);
 }
 
-async function handleLogout() {
-  Store.logout();
-  toast('Logged out — see you soon! 💜', 'info');
-  navigate('home');
+// ── Bottom Mobile Nav ──
+function renderBottomNav(isLoggedIn) {
+  var existing = document.getElementById('bottom-nav');
+  if (existing) existing.remove();
+  if (!isLoggedIn) return;
+
+  var isAdmin = Store.isAdmin();
+  var bn = document.createElement('div');
+  bn.id = 'bottom-nav';
+  bn.innerHTML =
+    '<div class="bn-item" onclick="navigate(\'home\')">' +
+    '<span class="bn-icon">🏠</span><span class="bn-label">Home</span></div>' +
+
+    '<div class="bn-item" onclick="navigate(\'home\');setTimeout(function(){var el=document.getElementById(\'products-section\');if(el)el.scrollIntoView({behavior:\'smooth\'});},400)">' +
+    '<span class="bn-icon">🛍️</span><span class="bn-label">Shop</span></div>' +
+
+    '<div class="bn-item bn-cart" onclick="navigate(\'cart\')">' +
+    '<span class="bn-icon" style="position:relative">🛒<span id="cart-badge-m" style="display:none;position:absolute;top:-6px;right:-6px;background:#FF2EBD;color:#fff;font-size:0.6rem;font-weight:700;width:16px;height:16px;border-radius:50%;align-items:center;justify-content:center">0</span></span>' +
+    '<span class="bn-label">Cart</span></div>' +
+
+    '<div class="bn-item" onclick="navigate(\'orders\')">' +
+    '<span class="bn-icon">📦</span><span class="bn-label">Orders</span></div>' +
+
+    (isAdmin ?
+    '<div class="bn-item" onclick="navigate(\'admin\')">' +
+    '<span class="bn-icon">⚙️</span><span class="bn-label">Admin</span></div>'
+    :
+    '<div class="bn-item" onclick="navigate(\'dashboard\')">' +
+    '<span class="bn-icon">👤</span><span class="bn-label">Profile</span></div>'
+    );
+
+  document.body.appendChild(bn);
+  Store.updateCartBadge();
 }
 
 function handleLogout() {
   Store.logout();
+  var bn = document.getElementById('bottom-nav');
+  if (bn) bn.remove();
   renderNavbar();
   toast('Logged out — see you soon! 💜', 'info');
   navigate('home');
 }
 
 // RAE ENTERPRISE — Auth
-// Login/Register using username + password against profiles table
-// No Supabase Auth. No hashing. No localStorage sessions.
-// Just query profiles table directly.
+// Username + password against profiles table
+// Password protected with SHA-256 (Web Crypto — works in all browsers)
+
+async function sha256(str) {
+  var buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(function(b){ return ('00'+b.toString(16)).slice(-2); }).join('');
+}
 
 function renderAuth(mode) {
   mode = mode || 'login';
   document.getElementById('app').innerHTML =
     '<div class="auth-page page-enter">' +
-
-    // Left
     '<div class="auth-left"><div class="auth-illustration">' +
     '<div class="auth-mascot"><img src="logo.png" alt="Rae" onerror="this.style.display=\'none\'" /></div>' +
     '<h2 class="text-gradient">Shop Smarter.<br/>Live Prettier.</h2>' +
-    '<p style="color:var(--text-secondary);line-height:1.7">Luxury deals, referral rewards &amp; exclusive drops \u2728</p>' +
+    '<p style="color:var(--text-secondary);line-height:1.7">Luxury deals, referral rewards & exclusive drops \u2728</p>' +
     '<div class="auth-features">' +
     '<div class="auth-feature"><span class="auth-feature-icon">💜</span> Earn up to \u20a610,000 per referral</div>' +
-    '<div class="auth-feature"><span class="auth-feature-icon">\u2728</span> Bronze \u2192 Silver \u2192 Gold levels</div>' +
+    '<div class="auth-feature"><span class="auth-feature-icon">\u2728</span> Bronze \u2192 Silver \u2192 Gold</div>' +
     '<div class="auth-feature"><span class="auth-feature-icon">🔥</span> Daily flash sales</div>' +
-    '<div class="auth-feature"><span class="auth-feature-icon">🛡\ufe0f</span> Safe &amp; trusted checkout</div>' +
+    '<div class="auth-feature"><span class="auth-feature-icon">🛡\ufe0f</span> Safe & trusted checkout</div>' +
     '</div></div></div>' +
-
-    // Right
     '<div class="auth-right"><div class="auth-card glow-border">' +
     '<div class="auth-header">' +
     '<div class="auth-welcome-headline" id="auth-hl">Welcome to Rae Enterprise \u2728</div>' +
@@ -1630,10 +1689,10 @@ function renderAuth(mode) {
     (mode==='login' ? loginFormHTML() : registerFormHTML()) +
     '</div></div></div>';
 
-  // Typing animation
+  // Typing headline
   var hl = document.getElementById('auth-hl');
   if (hl) {
-    var pp = ['Welcome to Rae Enterprise \u2728','Hello Beautiful Shopper 💜','Discover Luxury Deals 🛍️','Your Glam Starts Here 💅','Shop. Slay. Repeat. 🌟'];
+    var pp=['Welcome to Rae Enterprise \u2728','Hello Beautiful Shopper 💜','Discover Luxury Deals 🛍️','Your Glam Starts Here 💅','Shop. Slay. Repeat. 🌟'];
     var pi=0,ci=pp[0].length,dl=false;
     function tick(){
       if(!document.getElementById('auth-hl'))return;
@@ -1649,12 +1708,10 @@ function renderAuth(mode) {
 function loginFormHTML() {
   return '<form onsubmit="doLogin(event)">' +
     '<div class="input-group"><label>Username</label>' +
-    '<div class="input-wrapper">' +
-    '<input class="input-field" type="text" id="l-user" placeholder="your_username" required autocomplete="username" />' +
+    '<div class="input-wrapper"><input class="input-field" type="text" id="l-user" placeholder="your_username" required autocomplete="username"/>' +
     '<span class="input-icon">💜</span></div></div>' +
     '<div class="input-group"><label>Password</label>' +
-    '<div class="input-wrapper">' +
-    '<input class="input-field" type="password" id="l-pw" placeholder="Your password" required autocomplete="current-password" />' +
+    '<div class="input-wrapper"><input class="input-field" type="password" id="l-pw" placeholder="Your password" required autocomplete="current-password"/>' +
     '<span class="input-icon" onclick="togglePw(\'l-pw\',this)" style="cursor:pointer">👁</span></div></div>' +
     '<button type="submit" class="btn btn-primary btn-full btn-lg" id="l-btn">Sign In \u2728</button>' +
     '</form>' +
@@ -1664,31 +1721,28 @@ function loginFormHTML() {
 function registerFormHTML() {
   return '<form onsubmit="doRegister(event)">' +
     '<div class="input-group"><label>Username</label>' +
-    '<div class="input-wrapper">' +
-    '<input class="input-field" type="text" id="r-user" placeholder="your_glamorous_name" required minlength="3" autocomplete="username" />' +
+    '<div class="input-wrapper"><input class="input-field" type="text" id="r-user" placeholder="your_glamorous_name" required minlength="3" autocomplete="username"/>' +
     '<span class="input-icon">💜</span></div></div>' +
     '<div class="input-group"><label>Email</label>' +
-    '<div class="input-wrapper">' +
-    '<input class="input-field" type="email" id="r-email" placeholder="gorgeous@email.com" required autocomplete="email" />' +
+    '<div class="input-wrapper"><input class="input-field" type="email" id="r-email" placeholder="gorgeous@email.com" required autocomplete="email"/>' +
     '<span class="input-icon">📧</span></div></div>' +
     '<div class="input-group"><label>Phone</label>' +
-    '<div class="input-wrapper">' +
-    '<input class="input-field" type="tel" id="r-phone" placeholder="08012345678" required />' +
+    '<div class="input-wrapper"><input class="input-field" type="tel" id="r-phone" placeholder="08012345678" required/>' +
     '<span class="input-icon">📱</span></div></div>' +
     '<div class="input-group"><label>Password</label>' +
-    '<div class="input-wrapper">' +
-    '<input class="input-field" type="password" id="r-pw" placeholder="Choose a password" required minlength="4" autocomplete="new-password" />' +
-    '<span class="input-icon" onclick="togglePw(\'r-pw\',this)" style="cursor:pointer">👁</span></div></div>' +
+    '<div class="input-wrapper"><input class="input-field" type="password" id="r-pw" placeholder="Choose a strong password" required minlength="4" autocomplete="new-password"/>' +
+    '<span class="input-icon" onclick="togglePw(\'r-pw\',this)" style="cursor:pointer">👁</span></div>' +
+    '<div class="password-strength"><div class="strength-bar"><div class="strength-fill" id="s-fill" style="width:0%"></div></div>' +
+    '<span id="s-lbl" style="font-size:0.75rem;color:var(--text-muted)"></span></div></div>' +
     '<div class="input-group"><label>Referral Code <span style="color:var(--text-muted);font-weight:400">(optional)</span></label>' +
-    '<div class="input-wrapper">' +
-    '<input class="input-field" type="text" id="r-ref" placeholder="Friend\'s username" />' +
+    '<div class="input-wrapper"><input class="input-field" type="text" id="r-ref" placeholder="Friend\'s username"/>' +
     '<span class="input-icon">🎁</span></div></div>' +
     '<button type="submit" class="btn btn-primary btn-full btn-lg" id="r-btn">Create Account \u2728</button>' +
     '</form>' +
     '<div class="auth-footer">Have account? <span style="color:var(--neon-purple-light);cursor:pointer;font-weight:700" onclick="renderAuth(\'login\')">Sign in</span></div>';
 }
 
-// ── REGISTER ──────────────────────────────────────────
+// ── REGISTER ─────────────────────────────────────────
 async function doRegister(e) {
   e.preventDefault();
   var btn      = document.getElementById('r-btn');
@@ -1704,58 +1758,71 @@ async function doRegister(e) {
 
   setLoading(btn, true);
 
-  // 1. Check username not taken
-  var uCheck = await db.from('profiles').select('id').eq('username', username);
-  if (uCheck.data && uCheck.data.length > 0) {
-    toast('Username already taken — try another 💔', 'error');
-    setLoading(btn, false); return;
-  }
-
-  // 2. Check email not taken
-  var eCheck = await db.from('profiles').select('id').eq('email', email);
-  if (eCheck.data && eCheck.data.length > 0) {
-    toast('Email already registered — please sign in 💜', 'warn');
-    setLoading(btn, false);
-    renderAuth('login'); return;
-  }
-
-  // 3. Insert
-  var ins = await db.from('profiles').insert({
-    username:        username,
-    email:           email,
-    phone:           phone,
-    password:        password,
-    referred_by:     refBy || null,
-    role:            'user',
-    wallet_balance:  0,
-    total_spent:     0,
-    referral_count:  0,
-    created_at:      new Date().toISOString()
-  }).select().single();
-
-  if (ins.error || !ins.data) {
-    var msg = ins.error ? ins.error.message : 'unknown error';
-    toast('Could not register: ' + msg, 'error');
-    setLoading(btn, false); return;
-  }
-
-  // 4. Credit referrer
-  if (refBy) {
-    var rr = await db.from('profiles').select('id,referral_count').eq('username', refBy).single();
-    if (rr.data) {
-      await db.from('profiles').update({ referral_count: (rr.data.referral_count || 0) + 1 }).eq('id', rr.data.id);
+  try {
+    // Check username not taken
+    var uChk = await db.from('profiles').select('id').eq('username', username);
+    if (uChk.data && uChk.data.length > 0) {
+      toast('Username taken — try another 💔', 'error');
+      setLoading(btn, false); return;
     }
-  }
 
-  // 5. Save session and go home
-  Store.user    = ins.data;
-  Store.profile = ins.data;
-  sessionStorage.setItem('rae_uid', ins.data.id);
-  await Store.loadCart();
-  renderNavbar();
-  setLoading(btn, false);
-  toast('Welcome to the family! 💜\u2728');
-  navigate('home');
+    // Check email not taken
+    var eChk = await db.from('profiles').select('id').eq('email', email);
+    if (eChk.data && eChk.data.length > 0) {
+      toast('Email already registered — please sign in 💜', 'warn');
+      setLoading(btn, false); renderAuth('login'); return;
+    }
+
+    // Hash password with SHA-256
+    var hashed = await sha256(password);
+
+    // Insert user
+    var ins = await db.from('profiles').insert({
+      username:       username,
+      email:          email,
+      phone:          phone,
+      password:       hashed,
+      referred_by:    refBy || null,
+      role:           'user',
+      wallet_balance: 0,
+      total_spent:    0,
+      referral_count: 0,
+      created_at:     new Date().toISOString()
+    }).select().single();
+
+    if (ins.error || !ins.data) {
+      var errMsg = ins.error ? ins.error.message : 'Insert failed';
+      // If still RLS error, show clear instructions
+      if (errMsg.toLowerCase().indexOf('security') !== -1 || errMsg.toLowerCase().indexOf('policy') !== -1) {
+        toast('Database not set up yet! Please run supabase_setup.sql first.', 'error');
+      } else {
+        toast('Registration failed: ' + errMsg, 'error');
+      }
+      setLoading(btn, false); return;
+    }
+
+    // Credit referrer
+    if (refBy) {
+      try {
+        var rr = await db.from('profiles').select('id,referral_count').eq('username', refBy).single();
+        if (rr.data) await db.from('profiles').update({ referral_count: (rr.data.referral_count||0)+1 }).eq('id', rr.data.id);
+      } catch(re) {}
+    }
+
+    // Log in
+    Store.user = ins.data; Store.profile = ins.data;
+    sessionStorage.setItem('rae_uid', ins.data.id);
+    await Store.loadCart();
+    renderNavbar();
+    setLoading(btn, false);
+    toast('Welcome to the family! 💜\u2728');
+    navigate('home');
+
+  } catch(err) {
+    setLoading(btn, false);
+    toast('Error: ' + (err.message || 'unknown'), 'error');
+    console.error(err);
+  }
 }
 
 // ── LOGIN ─────────────────────────────────────────────
@@ -1771,32 +1838,39 @@ async function doLogin(e) {
 
   setLoading(btn, true);
 
-  // Query by username + password directly
-  var res = await db.from('profiles').select('*')
-    .eq('username', username)
-    .eq('password', password)
-    .single();
+  try {
+    // Hash the entered password
+    var hashed = await sha256(password);
 
-  if (res.error || !res.data) {
-    // Figure out why
-    var eCheck = await db.from('profiles').select('id').eq('username', username).single();
-    if (eCheck.error || !eCheck.data) {
+    // Check username exists first
+    var uRes = await db.from('profiles').select('id,password').eq('username', username).single();
+
+    if (uRes.error || !uRes.data) {
       toast('Username not found 💔 Please register first.', 'error');
-    } else {
-      toast('Wrong password 💔 Please try again.', 'error');
+      setLoading(btn, false); return;
     }
-    setLoading(btn, false); return;
-  }
 
-  // ✅ Success
-  Store.user    = res.data;
-  Store.profile = res.data;
-  sessionStorage.setItem('rae_uid', res.data.id);
-  await Store.loadCart();
-  renderNavbar();
-  setLoading(btn, false);
-  toast('Welcome back, gorgeous! 💜');
-  navigate('home');
+    // Compare hashed passwords
+    if (uRes.data.password !== hashed) {
+      toast('Wrong password 💔 Please try again.', 'error');
+      setLoading(btn, false); return;
+    }
+
+    // Fetch full profile
+    var full = await db.from('profiles').select('*').eq('username', username).single();
+    Store.user = full.data; Store.profile = full.data;
+    sessionStorage.setItem('rae_uid', full.data.id);
+    await Store.loadCart();
+    renderNavbar();
+    setLoading(btn, false);
+    toast('Welcome back, gorgeous! 💜');
+    navigate('home');
+
+  } catch(err) {
+    setLoading(btn, false);
+    toast('Error: ' + (err.message || 'unknown'), 'error');
+    console.error(err);
+  }
 }
 
 function togglePw(id, icon) {
@@ -1805,288 +1879,273 @@ function togglePw(id, icon) {
   icon.textContent = el.type === 'password' ? '👁' : '🙈';
 }
 
-// ═══════════════════════════════════════════════════════
-// RAE ENTERPRISE — Home Page
-// ═══════════════════════════════════════════════════════
+// Password strength meter
+document.addEventListener('input', function(e) {
+  if (e.target.id !== 'r-pw') return;
+  var pw = e.target.value;
+  var s = 0;
+  if (pw.length >= 6) s++; if (/[A-Z]/.test(pw)) s++; if (/[0-9]/.test(pw)) s++; if (/[^A-Za-z0-9]/.test(pw)) s++;
+  var lvl = [{p:'0%',c:'transparent',t:''},{p:'25%',c:'#ff4444',t:'Weak'},{p:'50%',c:'#ffaa00',t:'Fair'},{p:'75%',c:'#7B2EFF',t:'Good 💜'},{p:'100%',c:'#00F5FF',t:'Strong 💪'}][s];
+  var f=document.getElementById('s-fill'), l=document.getElementById('s-lbl');
+  if(f){f.style.width=lvl.p;f.style.background=lvl.c;}
+  if(l)l.textContent=lvl.t;
+});
 
-const CATEGORIES = [
-  { icon: '✨', label: 'All' },
-  { icon: '👗', label: 'Fashion' },
-  { icon: '💄', label: 'Beauty' },
-  { icon: '📱', label: 'Tech' },
-  { icon: '🏠', label: 'Home' },
-  { icon: '👟', label: 'Shoes' },
-  { icon: '💎', label: 'Accessories' },
-  { icon: '🎁', label: 'Gifts' },
+// RAE ENTERPRISE — Home Page (fully featured)
+
+var CATEGORIES = [
+  {icon:'✨',label:'All'}, {icon:'👗',label:'Fashion'}, {icon:'💄',label:'Beauty'},
+  {icon:'📱',label:'Tech'}, {icon:'🏠',label:'Home'}, {icon:'👟',label:'Shoes'},
+  {icon:'💎',label:'Accessories'}, {icon:'🎁',label:'Gifts'}
 ];
 
-let homeCategory = 'All';
-let flashEndTime = Date.now() + 4 * 60 * 60 * 1000; // 4 hours from now
+var homeCategory = 'All';
+var flashEndTime = Date.now() + 4 * 60 * 60 * 1000;
+var productsOffset = 0;
 
 async function renderHome() {
-  document.getElementById('app').innerHTML = `
-    <div class="home-page page-enter">
-      <!-- Hero -->
-      <section class="hero">
-        <div class="hero-content">
-          <div class="hero-eyebrow">🌟 Nigeria's Premium Shopping Destination</div>
-          <h1 class="hero-title">
-            <span class="text-gradient">Shop with</span><br/>
-            <em class="italic-accent text-gradient-pink">Glamour</em>
-            <span class="text-gradient"> & Style</span>
-          </h1>
-          <p class="hero-subtitle">Discover thousands of premium products at unbeatable prices. Earn rewards, refer friends, and unlock exclusive deals ✨</p>
-          <div class="hero-actions">
-            <button class="btn btn-primary btn-lg" onclick="document.getElementById('products-section').scrollIntoView({behavior:'smooth'})">
-              Shop Now 🛍️
-            </button>
-            ${!Store.user ? `<button class="btn btn-outline btn-lg" onclick="navigate('register')">Join Free & Earn</button>` : ''}
-          </div>
-          <div class="hero-stats">
-            <div class="hero-stat">
-              <div class="hero-stat-num text-neon-purple">10K+</div>
-              <div class="hero-stat-label">Happy Shoppers</div>
-            </div>
-            <div class="hero-stat">
-              <div class="hero-stat-num text-neon-cyan">50K+</div>
-              <div class="hero-stat-label">Products</div>
-            </div>
-            <div class="hero-stat">
-              <div class="hero-stat-num text-neon-pink">₦5M+</div>
-              <div class="hero-stat-label">Rewards Paid</div>
-            </div>
-          </div>
-        </div>
-      </section>
+  var loggedIn = !!Store.user;
+  var username = Store.profile ? Store.profile.username : '';
 
-      <!-- Flash Sale Banner -->
-      <div class="flash-banner">
-        <div class="flash-banner-label">
-          <span class="flash-fire">🔥</span>
-          <span class="text-neon-pink fw-700">FLASH SALE</span>
-          <span style="color:var(--text-secondary);font-size:0.85rem">— Up to 70% OFF selected items</span>
-        </div>
-        <div class="countdown" id="flash-countdown"></div>
-      </div>
+  document.getElementById('app').innerHTML =
+    '<div class="home-page page-enter">' +
 
-      <!-- Marquee -->
-      <div class="marquee-wrap">
-        <div class="marquee" id="marquee-inner"></div>
-      </div>
+    // ── Hero ──
+    '<section class="hero">' +
+    '<div class="hero-content">' +
+    '<div class="hero-eyebrow">🌟 Nigeria\'s Premium Shopping Destination</div>' +
+    '<h1 class="hero-title">' +
+    '<span class="text-gradient">Shop with</span><br/>' +
+    '<em class="italic-accent text-gradient-pink">Glamour</em>' +
+    '<span class="text-gradient"> & Style</span>' +
+    '</h1>' +
+    '<p class="hero-subtitle">Discover thousands of premium products at unbeatable prices. Earn rewards, refer friends, and unlock exclusive deals ✨</p>' +
+    '<div class="hero-actions">' +
+    '<button class="btn btn-primary btn-lg" onclick="document.getElementById(\'products-section\').scrollIntoView({behavior:\'smooth\'})">Shop Now 🛍️</button>' +
+    (!loggedIn ? '<button class="btn btn-outline btn-lg" onclick="navigate(\'register\')">Join Free & Earn 🎁</button>' : '') +
+    '</div>' +
+    '<div class="hero-stats">' +
+    '<div class="hero-stat"><div class="hero-stat-num text-neon-purple">10K+</div><div class="hero-stat-label">Happy Shoppers</div></div>' +
+    '<div class="hero-stat"><div class="hero-stat-num text-neon-cyan">50K+</div><div class="hero-stat-label">Products</div></div>' +
+    '<div class="hero-stat"><div class="hero-stat-num text-neon-pink">₦5M+</div><div class="hero-stat-label">Rewards Paid</div></div>' +
+    '</div>' +
+    (loggedIn ? '<div style="margin-top:20px"><span class="badge badge-purple">👋 Welcome back, '+username+'! 💜</span></div>' : '') +
+    '</div></section>' +
 
-      <!-- Categories -->
-      <section class="category-section">
-        <div class="container">
-          <h2 class="section-title text-center">Shop by <span class="text-gradient">Category</span></h2>
-          <p class="section-sub text-center">Find exactly what you're looking for 💅</p>
-          <div class="category-pills">
-            ${CATEGORIES.map(c => `
-              <div class="category-pill ${c.label === homeCategory ? 'active' : ''}"
-                onclick="filterCategory('${c.label}')">
-                ${c.icon} ${c.label}
-              </div>
-            `).join('')}
-          </div>
-        </div>
-      </section>
+    // ── Flash Sale Banner ──
+    '<div class="flash-banner">' +
+    '<div class="flash-banner-label"><span class="flash-fire">🔥</span>' +
+    '<span class="text-neon-pink fw-700">FLASH SALE</span>' +
+    '<span style="color:var(--text-secondary);font-size:0.85rem"> — Up to 70% OFF selected items</span></div>' +
+    '<div class="countdown" id="flash-countdown"></div>' +
+    '</div>' +
 
-      <!-- Products -->
-      <section class="products-section container" id="products-section">
-        <div class="flex-between mb-16">
-          <div>
-            <h2 class="section-title">
-              ${homeCategory === 'All' ? '✨ Featured Products' : homeCategory + ' Collection'}
-            </h2>
-          </div>
-          <div style="display:flex;gap:8px;align-items:center">
-            <select class="input-field" style="padding:8px 14px;width:auto" id="sort-select" onchange="sortProducts(this.value)">
-              <option value="newest">Newest</option>
-              <option value="price-asc">Price: Low-High</option>
-              <option value="price-desc">Price: High-Low</option>
-              <option value="discount">Best Deals</option>
-            </select>
-          </div>
-        </div>
-        <div class="products-grid" id="products-grid">
-          ${productsSkeleton(8)}
-        </div>
-        <div style="text-align:center;margin-top:32px">
-          <button class="btn btn-outline" id="load-more-btn" onclick="loadMoreProducts()">
-            Load More Products
-          </button>
-        </div>
-      </section>
+    // ── Marquee ──
+    '<div class="marquee-wrap"><div class="marquee" id="marquee-inner"></div></div>' +
 
-      <!-- Referral CTA -->
-      ${Store.user ? '' : `
-        <div class="referral-cta">
-          <h2>🎁 Earn While You Share</h2>
-          <p>Refer a friend and earn up to ₦10,000 in wallet rewards when they shop!</p>
-          <button class="btn btn-cyan btn-lg" onclick="navigate('register')">Start Earning Today ✨</button>
-        </div>
-      `}
+    // ── Search (mobile) ──
+    '<div style="padding:16px 20px 0;display:none" id="mobile-search-bar">' +
+    '<div style="position:relative">' +
+    '<span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:0.9rem">🔍</span>' +
+    '<input type="text" id="mob-search" class="input-field" placeholder="Search products..." style="padding-left:40px" oninput="doMobSearch(this.value)" />' +
+    '</div>' +
+    '<div id="mob-search-results" style="margin-top:8px"></div>' +
+    '</div>' +
 
-      <!-- Support Widget -->
-      <div style="text-align:center;padding:40px 24px;border-top:1px solid var(--glass-border)">
-        <p style="color:var(--text-muted);margin-bottom:16px">Need help? We're here for you 💜</p>
-        <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
-          <a href="tel:08117706203" class="btn btn-ghost">📞 Call Us</a>
-          <a href="https://wa.me/2348117706203" target="_blank" class="btn btn-ghost">💬 WhatsApp</a>
-        </div>
-      </div>
-    </div>
-  `;
+    // ── Categories ──
+    '<section class="category-section">' +
+    '<div class="container">' +
+    '<h2 class="section-title text-center">Shop by <span class="text-gradient">Category</span></h2>' +
+    '<p class="section-sub text-center">Find exactly what you\'re looking for 💅</p>' +
+    '<div class="category-pills">' +
+    CATEGORIES.map(function(c) {
+      return '<div class="category-pill '+(c.label===homeCategory?'active':'')+'" onclick="filterCategory(\''+c.label+'\')">'+c.icon+' '+c.label+'</div>';
+    }).join('') +
+    '</div></div></section>' +
 
-  loadProducts();
+    // ── Products ──
+    '<section class="products-section container" id="products-section">' +
+    '<div class="flex-between mb-16">' +
+    '<h2 class="section-title">'+(homeCategory==='All'?'✨ Featured Products':homeCategory+' Collection')+'</h2>' +
+    '<select class="input-field" style="padding:8px 14px;width:auto" id="sort-select" onchange="loadProducts(true)">' +
+    '<option value="newest">Newest</option>' +
+    '<option value="price-asc">Price: Low–High</option>' +
+    '<option value="price-desc">Price: High–Low</option>' +
+    '<option value="discount">Best Deals</option>' +
+    '</select></div>' +
+    '<div class="products-grid" id="products-grid">'+productsSkeleton(8)+'</div>' +
+    '<div style="text-align:center;margin-top:32px">' +
+    '<button class="btn btn-outline" id="load-more-btn" onclick="loadProducts(false)">Load More ✨</button>' +
+    '</div></section>' +
+
+    // ── Referral CTA ──
+    (!loggedIn ?
+    '<div class="referral-cta">' +
+    '<h2>🎁 Earn While You Share</h2>' +
+    '<p>Refer a friend and earn up to ₦10,000 in wallet rewards when they shop!</p>' +
+    '<button class="btn btn-cyan btn-lg" onclick="navigate(\'register\')">Start Earning Today ✨</button>' +
+    '</div>' : '') +
+
+    // ── Level Banner (logged in) ──
+    (loggedIn ?
+    '<div style="margin:0 20px 32px;padding:24px 28px;border-radius:var(--radius-lg);background:linear-gradient(135deg,rgba(123,46,255,0.15),rgba(0,245,255,0.08));border:1px solid rgba(123,46,255,0.25);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px">' +
+    '<div>' +
+    '<div style="font-weight:700;font-size:1rem;margin-bottom:4px">'+getLevelDisplay()+'</div>' +
+    '<div style="font-size:0.8rem;color:var(--text-muted)">Wallet: <span style="color:var(--neon-cyan);font-weight:700">'+formatNaira(Store.profile.wallet_balance||0)+'</span> &nbsp;|&nbsp; Referrals: <span style="color:var(--neon-purple-light);font-weight:700">'+(Store.profile.referral_count||0)+'</span></div>' +
+    '</div>' +
+    '<div style="display:flex;gap:10px;flex-wrap:wrap">' +
+    '<button class="btn btn-ghost btn-sm" onclick="navigate(\'referrals\')">🎁 Refer Friends</button>' +
+    '<button class="btn btn-outline btn-sm" onclick="navigate(\'dashboard\')">My Account</button>' +
+    '</div></div>'
+    : '') +
+
+    // ── Support ──
+    '<div style="text-align:center;padding:32px 24px;border-top:1px solid var(--glass-border)">' +
+    '<p style="color:var(--text-muted);margin-bottom:14px">Need help? We\'re here for you 💜</p>' +
+    '<div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">' +
+    '<a href="tel:08117706203" class="btn btn-ghost">📞 08117706203</a>' +
+    '<a href="https://wa.me/2348117706203" target="_blank" class="btn btn-ghost">💬 WhatsApp</a>' +
+    '</div></div>' +
+    '</div>';
+
+  // Show mobile search bar on small screens
+  var mSearch = document.getElementById('mobile-search-bar');
+  if (mSearch && window.innerWidth <= 768) mSearch.style.display = 'block';
+
+  loadProducts(true);
   startCountdown();
   renderMarquee();
 }
 
-let productsOffset = 0;
-let allProducts = [];
+function getLevelDisplay() {
+  var spent = Store.profile ? (Store.profile.total_spent || 0) : 0;
+  if (spent >= 100000) return '🥇 Gold Member — You\'re amazing!';
+  if (spent >= 30000)  return '🥈 Silver Member — Keep shopping!';
+  return '🥉 Bronze Member — Level up by shopping more!';
+}
 
-async function loadProducts(reset = true) {
-  if (reset) { productsOffset = 0; }
-  const grid = document.getElementById('products-grid');
+async function loadProducts(reset) {
+  if (reset) productsOffset = 0;
+  var grid = document.getElementById('products-grid');
   if (!grid) return;
+  if (reset) grid.innerHTML = productsSkeleton(8);
 
-  let query = db.from('products').select('*').eq('in_stock', true);
+  var sort = (document.getElementById('sort-select') || {}).value || 'newest';
+  var query = db.from('products').select('*').eq('in_stock', true);
   if (homeCategory !== 'All') query = query.eq('category', homeCategory);
-
-  const sort = document.getElementById('sort-select')?.value || 'newest';
-  if (sort === 'price-asc') query = query.order('discount_price', { ascending: true });
-  else if (sort === 'price-desc') query = query.order('discount_price', { ascending: false });
-  else if (sort === 'discount') query = query.order('discount_price', { ascending: true });
-  else query = query.order('created_at', { ascending: false });
-
+  if (sort === 'price-asc')  query = query.order('discount_price', {ascending:true});
+  else if (sort === 'price-desc') query = query.order('discount_price', {ascending:false});
+  else query = query.order('created_at', {ascending:false});
   query = query.range(productsOffset, productsOffset + 11);
 
-  const { data, error } = await query;
-  if (error) { console.error(error); return; }
+  var res = await query;
+  var data = res.data || [];
 
-  if (reset) { allProducts = data || []; grid.innerHTML = ''; }
-  else { allProducts = [...allProducts, ...(data || [])]; }
-
-  if (!allProducts.length) {
-    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:60px 20px">
-      <div style="font-size:3rem;margin-bottom:12px">🛍️</div>
-      <p style="color:var(--text-muted)">No products found. Check back soon!</p>
-    </div>`;
+  if (reset) grid.innerHTML = '';
+  if (!data.length && reset) {
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:60px 20px"><div style="font-size:3rem;margin-bottom:12px">🛍️</div><p style="color:var(--text-muted)">No products found yet. Check back soon!</p></div>';
     return;
   }
 
-  if (reset) grid.innerHTML = '';
-  allProducts.slice(reset ? 0 : productsOffset).forEach(p => {
-    grid.insertAdjacentHTML('beforeend', productCardHTML(p));
-  });
-
+  data.forEach(function(p) { grid.insertAdjacentHTML('beforeend', productCardHTML(p)); });
   productsOffset += 12;
 }
 
 function productCardHTML(p) {
-  const discount = getDiscount(p.price, p.discount_price);
-  const imgSrc = p.images?.[0] || 'https://placehold.co/400x400/7B2EFF/fff?text=✨';
-  const rating = (3.8 + Math.random() * 1.2).toFixed(1);
-  const reviews = Math.floor(20 + Math.random() * 200);
-  const stock = p.stock_count;
-  const isLow = stock > 0 && stock <= 10;
+  var discount = getDiscount(p.price, p.discount_price);
+  var img = (p.images && p.images[0]) || 'https://placehold.co/400x400/7B2EFF/fff?text=✨';
+  var stars = '★★★★' + (Math.random()>0.5?'★':'☆');
+  var reviews = Math.floor(20 + Math.random()*200);
+  var stock = p.stock_count || 0;
 
-  return `
-    <div class="product-card" onclick="navigate('product', {id:'${p.id}'})">
-      <div class="product-img-wrap">
-        <img class="product-img" src="${imgSrc}" alt="${p.name}" loading="lazy"
-          onerror="this.src='https://placehold.co/400x400/7B2EFF/fff?text=✨'" />
-        <div class="product-badges">
-          ${discount > 0 ? `<span class="badge badge-off">-${discount}% OFF</span>` : ''}
-          ${isLow ? `<span class="badge badge-pink">🔥 Only ${stock} left!</span>` : ''}
-          ${p.is_flash ? `<span class="badge badge-gold">⚡ Flash</span>` : ''}
-        </div>
-        <button class="product-wishlist" onclick="event.stopPropagation();toggleWishlist(this, '${p.id}')">🤍</button>
-        <div class="product-img-overlay">
-          <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();quickAdd('${p.id}')">
-            + Add to Cart
-          </button>
-        </div>
-      </div>
-      <div class="product-info">
-        <div class="product-name">${p.name}</div>
-        <div class="product-price-row">
-          ${discount > 0 ? `<span class="price-original">${formatNaira(p.price)}</span>` : ''}
-          <span class="price-discount">${formatNaira(p.discount_price || p.price)}</span>
-        </div>
-        <div class="product-rating">
-          <span class="stars">${'★'.repeat(Math.floor(rating))}${'☆'.repeat(5 - Math.floor(rating))}</span>
-          <span class="product-rating-count">(${reviews})</span>
-        </div>
-        <button class="product-add-btn" onclick="event.stopPropagation();quickAdd('${p.id}')">
-          🛒 Add to Cart
-        </button>
-      </div>
-    </div>
-  `;
+  return '<div class="product-card" onclick="navigate(\'product\',{id:\''+p.id+'\'})">' +
+    '<div class="product-img-wrap">' +
+    '<img class="product-img" src="'+img+'" alt="'+p.name+'" loading="lazy" onerror="this.src=\'https://placehold.co/400x400/7B2EFF/fff?text=✨\'" />' +
+    '<div class="product-badges">' +
+    (discount>0?'<span class="badge badge-off">-'+discount+'% OFF</span>':'') +
+    (stock>0&&stock<=10?'<span class="badge badge-pink">🔥 Only '+stock+' left!</span>':'') +
+    (p.is_flash?'<span class="badge badge-gold">⚡ Flash</span>':'') +
+    '</div>' +
+    '<button class="product-wishlist" onclick="event.stopPropagation();this.textContent=this.textContent===\'🤍\'?\'❤️\':\'🤍\'">🤍</button>' +
+    '<div class="product-img-overlay">' +
+    '<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();quickAdd(\''+p.id+'\')">+ Cart</button>' +
+    '</div></div>' +
+    '<div class="product-info">' +
+    '<div class="product-name">'+p.name+'</div>' +
+    '<div class="product-price-row">' +
+    (discount>0?'<span class="price-original">'+formatNaira(p.price)+'</span>':'') +
+    '<span class="price-discount">'+formatNaira(p.discount_price||p.price)+'</span>' +
+    '</div>' +
+    '<div class="product-rating"><span class="stars">'+stars+'</span><span class="product-rating-count">('+reviews+')</span></div>' +
+    '<button class="product-add-btn" onclick="event.stopPropagation();quickAdd(\''+p.id+'\')">🛒 Add to Cart</button>' +
+    '</div></div>';
 }
 
 function productsSkeleton(n) {
-  return Array(n).fill(`
-    <div class="product-card" style="pointer-events:none">
-      <div class="product-img-wrap" style="background:var(--glass);animation:pulse 1.5s ease infinite alternate">
-      </div>
-      <div class="product-info">
-        <div style="height:14px;background:var(--glass);border-radius:4px;margin-bottom:8px;animation:pulse 1.5s ease infinite alternate"></div>
-        <div style="height:18px;background:var(--glass);border-radius:4px;width:60%;animation:pulse 1.5s ease infinite alternate"></div>
-      </div>
-    </div>
-  `).join('');
+  var s = '';
+  for (var i=0;i<n;i++) {
+    s += '<div class="product-card" style="pointer-events:none">' +
+    '<div class="product-img-wrap" style="background:var(--glass)"></div>' +
+    '<div class="product-info">' +
+    '<div style="height:14px;background:var(--glass);border-radius:4px;margin-bottom:8px"></div>' +
+    '<div style="height:18px;background:var(--glass);border-radius:4px;width:60%"></div>' +
+    '</div></div>';
+  }
+  return s;
 }
 
 async function quickAdd(productId) {
-  if (!Store.user) { toast('Please sign in to add to cart 💜', 'warn'); navigate('login'); return; }
-  const { data } = await db.from('products').select('*').eq('id', productId).single();
-  if (data) Store.addToCart(data);
-}
-
-function toggleWishlist(btn, id) {
-  btn.textContent = btn.textContent === '🤍' ? '❤️' : '🤍';
+  if (!Store.user) { toast('Please sign in to add to cart 💜','warn'); navigate('login'); return; }
+  var res = await db.from('products').select('*').eq('id', productId).single();
+  if (res.data) Store.addToCart(res.data);
 }
 
 function filterCategory(cat) {
   homeCategory = cat;
-  document.querySelectorAll('.category-pill').forEach(p => {
-    p.classList.toggle('active', p.textContent.trim().includes(cat));
+  document.querySelectorAll('.category-pill').forEach(function(p) {
+    p.classList.toggle('active', p.textContent.trim().indexOf(cat) !== -1);
   });
+  // Update section title
+  var t = document.querySelector('.products-section .section-title');
+  if (t) t.innerHTML = cat==='All' ? '✨ Featured Products' : cat+' Collection';
   loadProducts(true);
 }
 
-function sortProducts(val) { loadProducts(true); }
-
-function loadMoreProducts() { loadProducts(false); }
-
 function startCountdown() {
   function update() {
-    const el = document.getElementById('flash-countdown');
+    var el = document.getElementById('flash-countdown');
     if (!el) return;
-    const diff = flashEndTime - Date.now();
+    var diff = flashEndTime - Date.now();
     if (diff <= 0) { el.innerHTML = '<span style="color:var(--text-muted)">Sale Ended</span>'; return; }
-    const h = Math.floor(diff / 3600000);
-    const m = Math.floor((diff % 3600000) / 60000);
-    const s = Math.floor((diff % 60000) / 1000);
-    el.innerHTML = `
-      <div class="countdown-unit"><span class="countdown-num">${String(h).padStart(2,'0')}</span><span class="countdown-label">Hrs</span></div>
-      <div class="countdown-unit"><span class="countdown-num">${String(m).padStart(2,'0')}</span><span class="countdown-label">Min</span></div>
-      <div class="countdown-unit"><span class="countdown-num">${String(s).padStart(2,'0')}</span><span class="countdown-label">Sec</span></div>
-    `;
+    var h=Math.floor(diff/3600000), m=Math.floor((diff%3600000)/60000), s=Math.floor((diff%60000)/1000);
+    el.innerHTML =
+      '<div class="countdown-unit"><span class="countdown-num">'+String(h).padStart(2,'0')+'</span><span class="countdown-label">Hrs</span></div>' +
+      '<div class="countdown-unit"><span class="countdown-num">'+String(m).padStart(2,'0')+'</span><span class="countdown-label">Min</span></div>' +
+      '<div class="countdown-unit"><span class="countdown-num">'+String(s).padStart(2,'0')+'</span><span class="countdown-label">Sec</span></div>';
   }
-  update();
-  setInterval(update, 1000);
+  update(); setInterval(update, 1000);
 }
 
 function renderMarquee() {
-  const items = ['Free delivery on ₦20K+', '✨ New arrivals daily', '🔥 Flash deals every hour',
-    '💜 Earn referral rewards', '🎁 Gift wrapping available', '💳 Buy now pay later', '⭐ 10K+ 5-star reviews'];
-  const el = document.getElementById('marquee-inner');
+  var items = ['Free delivery on ₦20K+','✨ New arrivals daily','🔥 Flash deals every hour','💜 Earn referral rewards','🎁 Gift wrapping available','💳 Wallet payments accepted','⭐ 10K+ 5-star reviews'];
+  var el = document.getElementById('marquee-inner');
   if (!el) return;
-  const doubled = [...items, ...items];
-  el.innerHTML = doubled.map(i => `<div class="marquee-item">${i}</div>`).join('');
+  var doubled = items.concat(items);
+  el.innerHTML = doubled.map(function(i){return '<div class="marquee-item">'+i+'</div>';}).join('');
+}
+
+async function doMobSearch(q) {
+  var res_el = document.getElementById('mob-search-results');
+  if (!res_el) return;
+  if (!q || q.length < 2) { res_el.innerHTML = ''; return; }
+  var res = await db.from('products').select('id,name,price,discount_price,images').ilike('name','%'+q+'%').limit(5);
+  if (!res.data || !res.data.length) { res_el.innerHTML = '<p style="color:var(--text-muted);font-size:0.85rem;padding:8px">No results found</p>'; return; }
+  res_el.innerHTML = '<div style="background:var(--glass);border:1px solid var(--glass-border);border-radius:var(--radius);padding:8px">' +
+    res.data.map(function(p){
+      return '<div class="search-item" onclick="navigate(\'product\',{id:\''+p.id+'\'})">' +
+        '<img class="search-item-img" src="'+(p.images&&p.images[0]||'')+'" onerror="this.src=\'https://placehold.co/36x36/7B2EFF/fff?text=R\'" />' +
+        '<div><div class="search-item-name">'+p.name+'</div><div class="search-item-price">'+formatNaira(p.discount_price||p.price)+'</div></div></div>';
+    }).join('') + '</div>';
 }
 
 // ═══════════════════════════════════════════════════════
@@ -3485,5 +3544,4 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 </script>
-</body>
-</html>
+</body></html>
