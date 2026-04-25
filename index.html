@@ -1283,47 +1283,23 @@ input[type="checkbox"]:checked::after {
   .chatbot-window { width: calc(100vw - 48px); right: 0; }
 }
 
-
-  /* ── Loader (inline so it shows instantly) ── */
-  #rae-loader {
-    position: fixed; inset: 0; z-index: 99999;
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center; gap: 20px;
-    background: #0A0014;
-  }
-  #rae-loader .ldr-spin {
-    width: 56px; height: 56px;
-    border: 4px solid rgba(123,46,255,0.2);
-    border-top-color: #7B2EFF;
-    border-radius: 50%;
-    animation: spin 0.9s linear infinite;
-  }
-  #rae-loader .ldr-txt {
-    font-family: "Dancing Script", cursive;
-    font-size: 2.2rem; color: #F0E6FF;
-    animation: shimmer 1.5s ease-in-out infinite;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  @keyframes shimmer {
-    0%,100% { text-shadow: 0 0 20px #7B2EFF; }
-    50% { text-shadow: 0 0 40px #00F5FF, 0 0 80px #7B2EFF; }
-  }
+  #rae-loader{position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;background:#0A0014;transition:opacity 0.4s;}
+  #rae-loader.hide{opacity:0;pointer-events:none;}
+  .ldr-spin{width:56px;height:56px;border:4px solid rgba(123,46,255,0.25);border-top-color:#7B2EFF;border-radius:50%;animation:spin 0.9s linear infinite;}
+  .ldr-txt{font-family:"Dancing Script",cursive;font-size:2.2rem;color:#F0E6FF;animation:shimmer 1.5s ease-in-out infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  @keyframes shimmer{0%,100%{text-shadow:0 0 20px #7B2EFF;}50%{text-shadow:0 0 40px #00F5FF,0 0 80px #7B2EFF;}}
   </style>
 </head>
 <body>
 
-  <!-- LOADER: in HTML so it shows BEFORE any JS runs -->
-  <div id="rae-loader">
-    <div class="ldr-spin"></div>
-    <div class="ldr-txt">Rae Enterprise ✨</div>
-  </div>
+  <div id="rae-loader"><div class="ldr-spin"></div><div class="ldr-txt">Rae Enterprise ✨</div></div>
 
   <div id="particles-bg"></div>
   <div id="app"></div>
   <div id="chatbot-widget"></div>
   <div id="toast-container"></div>
 
-  <!-- Supabase CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
 // ═══════════════════════════════════════════════════════
@@ -1449,96 +1425,94 @@ function el(tag, attrs = {}, ...children) {
 // navigate() is defined in script.js to avoid redeclaration conflicts
 
 // ═══════════════════════════════════════════════════════
-// RAE ENTERPRISE — Global Store
+// RAE ENTERPRISE — Store (session via localStorage)
 // ═══════════════════════════════════════════════════════
 
-const Store = {
+var Store = {
   user: null,
   profile: null,
   cart: [],
   cartCount: 0,
 
+  // Load user from localStorage session
   async loadUser() {
     try {
-      const { data: { user } } = await db.auth.getUser();
-      this.user = user;
-      if (user) {
-        const { data } = await db.from('profiles').select('*').eq('id', user.id).single();
-        this.profile = data;
-        await this.loadCart();
+      var sess = localStorage.getItem('rae_session');
+      if (!sess) { this.user=null; this.profile=null; return null; }
+      var session = JSON.parse(sess);
+      if (!session || !session.id) { this.user=null; this.profile=null; return null; }
+
+      var res = await db.from('profiles').select('*').eq('id', session.id).single();
+      if (res.error || !res.data) {
+        // Session invalid — clear it
+        localStorage.removeItem('rae_session');
+        this.user=null; this.profile=null; return null;
       }
-      return user;
-    } catch (e) {
-      console.warn('loadUser error:', e);
-      return null;
+      this.user = res.data;
+      this.profile = res.data;
+      await this.loadCart();
+      return res.data;
+    } catch(e) {
+      console.warn('loadUser err:', e);
+      this.user=null; this.profile=null; return null;
     }
   },
 
+  logout() {
+    localStorage.removeItem('rae_session');
+    this.user=null; this.profile=null; this.cart=[]; this.cartCount=0;
+    this.updateCartBadge();
+  },
+
   async loadCart() {
-    if (!this.user) { this.cart = []; return; }
+    if (!this.user) { this.cart=[]; return; }
     try {
-      const saved = localStorage.getItem('rae_cart_' + this.user.id);
+      var saved = localStorage.getItem('rae_cart_'+this.user.id);
       this.cart = saved ? JSON.parse(saved) : [];
-    } catch(e) {
-      this.cart = [];
-    }
-    this.cartCount = this.cart.reduce((a, i) => a + i.qty, 0);
+    } catch(e) { this.cart=[]; }
+    this.cartCount = this.cart.reduce(function(a,i){return a+i.qty;},0);
     this.updateCartBadge();
   },
 
   saveCart() {
     if (!this.user) return;
-    try {
-      localStorage.setItem('rae_cart_' + this.user.id, JSON.stringify(this.cart));
-    } catch(e) {}
-    this.cartCount = this.cart.reduce((a, i) => a + i.qty, 0);
+    try { localStorage.setItem('rae_cart_'+this.user.id, JSON.stringify(this.cart)); } catch(e){}
+    this.cartCount = this.cart.reduce(function(a,i){return a+i.qty;},0);
     this.updateCartBadge();
   },
 
   addToCart(product) {
-    const existing = this.cart.find(i => i.id === product.id);
-    if (existing) { existing.qty += 1; }
-    else { this.cart.push(Object.assign({}, product, { qty: 1 })); }
+    var found = null;
+    for (var i=0;i<this.cart.length;i++) { if(this.cart[i].id===product.id){found=this.cart[i];break;} }
+    if (found) { found.qty+=1; }
+    else { var item={}; for(var k in product) item[k]=product[k]; item.qty=1; this.cart.push(item); }
     this.saveCart();
-    toast(product.name + ' added to cart! 🛒');
+    toast((product.name||'Item')+' added to cart! 🛒');
   },
 
-  removeFromCart(productId) {
-    this.cart = this.cart.filter(i => i.id !== productId);
-    this.saveCart();
+  removeFromCart(id) {
+    this.cart=this.cart.filter(function(i){return i.id!==id;}); this.saveCart();
   },
 
-  updateQty(productId, qty) {
-    if (qty <= 0) { this.removeFromCart(productId); return; }
-    const item = this.cart.find(i => i.id === productId);
-    if (item) item.qty = qty;
+  updateQty(id, qty) {
+    if(qty<=0){this.removeFromCart(id);return;}
+    for(var i=0;i<this.cart.length;i++){if(this.cart[i].id===id){this.cart[i].qty=qty;break;}}
     this.saveCart();
   },
 
   getCartTotal() {
-    return this.cart.reduce((a, i) => a + (i.discount_price || i.price) * i.qty, 0);
+    return this.cart.reduce(function(a,i){return a+(i.discount_price||i.price||0)*i.qty;},0);
   },
 
-  clearCart() {
-    this.cart = [];
-    this.saveCart();
-  },
+  clearCart() { this.cart=[]; this.saveCart(); },
 
   updateCartBadge() {
-    const badge = document.getElementById('cart-badge');
-    if (badge) {
-      badge.textContent = this.cartCount;
-      badge.classList.toggle('hidden', this.cartCount === 0);
-    }
+    var b=document.getElementById('cart-badge');
+    if(b){ b.textContent=this.cartCount; b.style.display=this.cartCount===0?'none':'flex'; }
   },
 
-  isAdmin() {
-    return this.profile && this.profile.role === 'admin';
-  }
+  isAdmin() { return !!(this.profile && this.profile.role==='admin'); }
 };
-
-// Auth state listener — registered AFTER initApp, inside script.js
-// (moved out of module level to avoid timing issues)
 
 // ═══════════════════════════════════════════════════════
 // RAE ENTERPRISE — Navbar
@@ -1641,252 +1615,264 @@ function renderNavbar() {
 }
 
 async function handleLogout() {
-  await db.auth.signOut();
+  Store.logout();
   toast('Logged out — see you soon! 💜', 'info');
   navigate('home');
 }
 
 // ═══════════════════════════════════════════════════════
-// RAE ENTERPRISE — Auth (Login + Register)
+// RAE ENTERPRISE — Auth (Plain table, no Supabase Auth)
+// Stores users in profiles table, checks email+password
 // ═══════════════════════════════════════════════════════
 
-function renderAuth(mode = 'login') {
-  const ref = new URLSearchParams(window.location.search).get('ref') || '';
-  document.getElementById('app').innerHTML = `
-    <div class="auth-page page-enter">
-      <!-- Left illustration -->
-      <div class="auth-left">
-        <div class="auth-illustration">
-          <div class="auth-mascot">
-            <img src="logo.png" alt="Rae" onerror="this.outerHTML='<div class=auth-mascot-placeholder>🐺</div>'" />
-          </div>
-          <h2 class="text-gradient">Shop Smarter.<br/>Live Prettier.</h2>
-          <p>Welcome to Rae Enterprise — your luxury shopping haven with exclusive deals, rewards, and a touch of magic ✨</p>
-          <div class="auth-features">
-            <div class="auth-feature"><span class="auth-feature-icon">💜</span> Earn rewards on every referral</div>
-            <div class="auth-feature"><span class="auth-feature-icon">✨</span> Level up from Bronze to Gold</div>
-            <div class="auth-feature"><span class="auth-feature-icon">🎁</span> Flash sales & exclusive deals</div>
-            <div class="auth-feature"><span class="auth-feature-icon">🛡️</span> Secure & trusted shopping</div>
-          </div>
-        </div>
-      </div>
+// Simple hash (SHA-256 via Web Crypto)
+async function hashPassword(password) {
+  var enc = new TextEncoder();
+  var buf = await crypto.subtle.digest('SHA-256', enc.encode(password));
+  return Array.from(new Uint8Array(buf)).map(function(b){ return b.toString(16).padStart(2,'0'); }).join('');
+}
 
-      <!-- Right form -->
-      <div class="auth-right">
-        <div class="auth-card glow-border">
-          <div class="auth-header">
-            <div class="auth-welcome-headline" id="auth-typing-headline"></div>
-            <p>Your glamorous shopping journey starts here 💅</p>
-          </div>
+function renderAuth(mode) {
+  mode = mode || 'login';
+  var ref = new URLSearchParams(window.location.search).get('ref') || '';
 
-          <div class="auth-tabs">
-            <button class="auth-tab ${mode === 'login' ? 'active' : ''}" onclick="renderAuth('login')">Sign In</button>
-            <button class="auth-tab ${mode === 'register' ? 'active' : ''}" onclick="renderAuth('register')">Join Free</button>
-          </div>
+  document.getElementById('app').innerHTML =
+    '<div class="auth-page page-enter">' +
 
-          ${ref ? `
-            <div class="referral-notice">🎁 You were referred by <strong>${ref}</strong> — welcome bonus unlocked!</div>
-          ` : ''}
+    '<div class="auth-left">' +
+    '<div class="auth-illustration">' +
+    '<div class="auth-mascot"><img src="logo.png" alt="Rae" onerror="this.outerHTML=\'<div style=font-size:6rem;text-align:center>🐺</div>\'" /></div>' +
+    '<h2 class="text-gradient">Shop Smarter.<br/>Live Prettier.</h2>' +
+    '<p style="color:var(--text-secondary);line-height:1.7">Your luxury shopping haven with exclusive deals, rewards, and magic \u2728</p>' +
+    '<div class="auth-features">' +
+    '<div class="auth-feature"><span class="auth-feature-icon">💜</span> Earn up to ₦10,000 per referral</div>' +
+    '<div class="auth-feature"><span class="auth-feature-icon">\u2728</span> Level up Bronze → Silver → Gold</div>' +
+    '<div class="auth-feature"><span class="auth-feature-icon">🔥</span> Flash sales every day</div>' +
+    '<div class="auth-feature"><span class="auth-feature-icon">🛡️</span> Safe & trusted checkout</div>' +
+    '</div></div></div>' +
 
-          ${mode === 'login' ? renderLoginForm() : renderRegisterForm(ref)}
-        </div>
-      </div>
-    </div>
-  `;
+    '<div class="auth-right"><div class="auth-card glow-border">' +
+    '<div class="auth-header">' +
+    '<div class="auth-welcome-headline" id="auth-headline">Welcome to Rae Enterprise \u2728</div>' +
+    '<p style="color:var(--text-secondary);font-size:0.875rem">Your glamorous journey starts here 💅</p>' +
+    '</div>' +
+    '<div class="auth-tabs">' +
+    '<button class="auth-tab '+(mode==='login'?'active':'')+'" onclick="renderAuth(\'login\')">Sign In</button>' +
+    '<button class="auth-tab '+(mode==='register'?'active':'')+'" onclick="renderAuth(\'register\')">Join Free</button>' +
+    '</div>' +
+    (ref ? '<div class="referral-notice">🎁 Referred by <strong>'+ref+'</strong> — bonus unlocked!</div>' : '') +
+    (mode === 'login' ? buildLoginForm() : buildRegisterForm(ref)) +
+    '</div></div></div>';
 
-  // Typing animation
-  const headline = document.getElementById('auth-typing-headline');
-  if (headline) {
-    const phrases = [
-      'Welcome to Rae Enterprise ✨',
-      'Hello Beautiful Shopper 💜',
-      'Discover Luxury Deals 🛍️',
-      'Your Glam Starts Here 💅',
-      'Shop. Slay. Repeat. 🌟',
-    ];
-    animatePlaceholder({ setAttribute: (attr, val) => { if (attr === 'placeholder') headline.textContent = val; } }, phrases, 70);
-    // Force initial text
-    headline.textContent = phrases[0];
+  startHeadlineTyping();
+  var pwEl = document.getElementById('auth-password');
+  if (pwEl) pwEl.addEventListener('input', updatePasswordStrength);
+}
+
+function startHeadlineTyping() {
+  var el = document.getElementById('auth-headline');
+  if (!el) return;
+  var phrases = ['Welcome to Rae Enterprise \u2728','Hello Beautiful Shopper 💜','Discover Luxury Deals 🛍️','Your Glam Starts Here 💅','Shop. Slay. Repeat. 🌟'];
+  var pi=0, ci=phrases[0].length, del=false;
+  el.textContent = phrases[0];
+  function tick() {
+    if (!document.getElementById('auth-headline')) return;
+    var p = phrases[pi];
+    if (!del){ el.textContent=p.slice(0,++ci); if(ci===p.length){del=true;setTimeout(tick,1800);return;} }
+    else { el.textContent=p.slice(0,--ci); if(ci===0){del=false;pi=(pi+1)%phrases.length;} }
+    setTimeout(tick, del?35:75);
   }
+  setTimeout(tick, 2000);
+}
 
-  // Password strength listener
-  const pwField = document.getElementById('auth-password');
-  if (pwField) {
-    pwField.addEventListener('input', updatePasswordStrength);
+function buildLoginForm() {
+  return '<form onsubmit="handleLogin(event)" autocomplete="on">' +
+    '<div class="input-group"><label>Email</label>' +
+    '<div class="input-wrapper"><input class="input-field" type="email" id="login-email" placeholder="gorgeous@email.com" required autocomplete="email" />' +
+    '<span class="input-icon">📧</span></div></div>' +
+    '<div class="input-group"><label>Password</label>' +
+    '<div class="input-wrapper"><input class="input-field" type="password" id="login-password" placeholder="Your password" required autocomplete="current-password" />' +
+    '<span class="input-icon" onclick="togglePw(\'login-password\',this)" style="cursor:pointer">👁</span></div></div>' +
+    '<button type="submit" class="btn btn-primary btn-full btn-lg" id="login-btn">Sign In \u2728</button>' +
+    '</form>' +
+    '<div class="auth-footer">No account? <span style="color:var(--neon-purple-light);cursor:pointer;font-weight:700" onclick="renderAuth(\'register\')">Join free!</span></div>';
+}
+
+function buildRegisterForm(ref) {
+  return '<form onsubmit="handleRegister(event)" autocomplete="on">' +
+    '<div class="input-group"><label>Username</label>' +
+    '<div class="input-wrapper"><input class="input-field" type="text" id="reg-username" placeholder="your_glamorous_name" required minlength="3" autocomplete="username" />' +
+    '<span class="input-icon">💜</span></div></div>' +
+    '<div class="input-group"><label>Email</label>' +
+    '<div class="input-wrapper"><input class="input-field" type="email" id="reg-email" placeholder="gorgeous@email.com" required autocomplete="email" />' +
+    '<span class="input-icon">📧</span></div></div>' +
+    '<div class="input-group"><label>Phone Number</label>' +
+    '<div class="input-wrapper"><input class="input-field" type="tel" id="reg-phone" placeholder="08012345678" required />' +
+    '<span class="input-icon">📱</span></div></div>' +
+    '<div class="input-group"><label>Password</label>' +
+    '<div class="input-wrapper"><input class="input-field" type="password" id="auth-password" placeholder="Min 6 characters" required minlength="6" autocomplete="new-password" />' +
+    '<span class="input-icon" onclick="togglePw(\'auth-password\',this)" style="cursor:pointer">👁</span></div>' +
+    '<div class="password-strength"><div class="strength-bar"><div class="strength-fill" id="strength-fill" style="width:0%"></div></div>' +
+    '<span class="strength-label" id="strength-label"></span></div></div>' +
+    '<div class="input-group"><label>Referral Code <span style="color:var(--text-muted);font-weight:400">(optional)</span></label>' +
+    '<div class="input-wrapper"><input class="input-field" type="text" id="reg-ref" placeholder="Friend\'s username" value="'+(ref||'')+'" />' +
+    '<span class="input-icon">🎁</span></div></div>' +
+    '<div class="remember-row"><label><input type="checkbox" id="terms" required> I agree to Terms of Service</label></div>' +
+    '<button type="submit" class="btn btn-primary btn-full btn-lg" id="register-btn">Create My Account \u2728</button>' +
+    '</form>' +
+    '<div class="auth-footer">Have an account? <span style="color:var(--neon-purple-light);cursor:pointer;font-weight:700" onclick="renderAuth(\'login\')">Sign in</span></div>';
+}
+
+// ── REGISTER — just insert a row into profiles table ──
+async function handleRegister(e) {
+  e.preventDefault();
+  var btn = document.getElementById('register-btn');
+  var username = (document.getElementById('reg-username').value||'').trim();
+  var email    = (document.getElementById('reg-email').value||'').trim().toLowerCase();
+  var phone    = (document.getElementById('reg-phone').value||'').trim();
+  var password = document.getElementById('auth-password').value||'';
+  var refBy    = (document.getElementById('reg-ref').value||'').trim();
+
+  if (!username||!email||!phone||!password) { toast('Please fill all fields 💔','error'); return; }
+  if (password.length < 6) { toast('Password must be at least 6 characters 💔','error'); return; }
+
+  setLoading(btn, true);
+
+  try {
+    // Check if email already exists
+    var check = await db.from('profiles').select('id').eq('email', email);
+    if (check.data && check.data.length > 0) {
+      toast('Email already registered! Please sign in 💜','warn');
+      setLoading(btn, false);
+      renderAuth('login');
+      setTimeout(function(){ var el=document.getElementById('login-email'); if(el) el.value=email; },300);
+      return;
+    }
+
+    // Check username taken
+    var checkU = await db.from('profiles').select('id').eq('username', username);
+    if (checkU.data && checkU.data.length > 0) {
+      toast('Username already taken! Try another 💔','error');
+      setLoading(btn, false);
+      return;
+    }
+
+    // Hash password
+    var hashed = await hashPassword(password);
+
+    // Insert user row
+    var newUser = {
+      username: username,
+      email: email,
+      phone: phone,
+      password_hash: hashed,
+      referred_by: refBy || null,
+      role: 'user',
+      wallet_balance: 0,
+      total_spent: 0,
+      referral_count: 0,
+      created_at: new Date().toISOString(),
+    };
+
+    var ins = await db.from('profiles').insert(newUser).select().single();
+
+    if (ins.error) {
+      console.error('Insert error:', ins.error);
+      toast('Registration failed: ' + ins.error.message, 'error');
+      setLoading(btn, false);
+      return;
+    }
+
+    // Credit referrer
+    if (refBy) {
+      try {
+        var refRes = await db.from('profiles').select('id,referral_count').eq('username', refBy).single();
+        if (refRes.data) {
+          await db.from('profiles').update({ referral_count: (refRes.data.referral_count||0)+1 }).eq('id', refRes.data.id);
+        }
+      } catch(e) {}
+    }
+
+    // Log them in immediately
+    Store.user = ins.data;
+    Store.profile = ins.data;
+    // Save session to localStorage
+    localStorage.setItem('rae_session', JSON.stringify({ id: ins.data.id, email: ins.data.email }));
+    await Store.loadCart();
+
+    setLoading(btn, false);
+    toast('Welcome to the family! 💜\u2728');
+    navigate('home');
+
+  } catch(err) {
+    setLoading(btn, false);
+    console.error('Register error:', err);
+    toast('Something went wrong. Please try again 💔','error');
   }
 }
 
-function renderLoginForm() {
-  return `
-    <form onsubmit="handleLogin(event)">
-      <div class="input-group">
-        <label>Email Address</label>
-        <div class="input-wrapper">
-          <input class="input-field" type="email" id="login-email" placeholder="gorgeous@email.com" required />
-          <span class="input-icon">📧</span>
-        </div>
-      </div>
-      <div class="input-group">
-        <label>Password</label>
-        <div class="input-wrapper">
-          <input class="input-field" type="password" id="login-password" placeholder="Your secret password" required />
-          <span class="input-icon" onclick="togglePw('login-password', this)" style="cursor:pointer">👁</span>
-        </div>
-      </div>
-      <div class="remember-row">
-        <label><input type="checkbox" id="remember" /> Remember me</label>
-        <a href="#" onclick="renderForgotPassword()">Forgot password?</a>
-      </div>
-      <button type="submit" class="btn btn-primary btn-full btn-lg" id="login-btn">
-        Sign In ✨
-      </button>
-    </form>
-    <div class="auth-footer">
-      Don't have an account? <a onclick="renderAuth('register')">Join for free!</a>
-    </div>
-  `;
-}
+// ── LOGIN — check email + hashed password ──
+async function handleLogin(e) {
+  e.preventDefault();
+  var btn = document.getElementById('login-btn');
+  var email    = (document.getElementById('login-email').value||'').trim().toLowerCase();
+  var password = document.getElementById('login-password').value||'';
 
-function renderRegisterForm(ref = '') {
-  return `
-    <form onsubmit="handleRegister(event)">
-      <div class="input-group">
-        <label>Username</label>
-        <div class="input-wrapper">
-          <input class="input-field" type="text" id="reg-username" placeholder="your_glamorous_name" required minlength="3" />
-          <span class="input-icon">💜</span>
-        </div>
-      </div>
-      <div class="input-group">
-        <label>Email Address</label>
-        <div class="input-wrapper">
-          <input class="input-field" type="email" id="reg-email" placeholder="gorgeous@email.com" required />
-          <span class="input-icon">📧</span>
-        </div>
-      </div>
-      <div class="input-group">
-        <label>Phone Number</label>
-        <div class="input-wrapper">
-          <input class="input-field" type="tel" id="reg-phone" placeholder="08012345678" required />
-          <span class="input-icon">📱</span>
-        </div>
-      </div>
-      <div class="input-group">
-        <label>Password</label>
-        <div class="input-wrapper">
-          <input class="input-field" type="password" id="auth-password" placeholder="Min 8 characters" required minlength="8" />
-          <span class="input-icon" onclick="togglePw('auth-password', this)" style="cursor:pointer">👁</span>
-        </div>
-        <div class="password-strength">
-          <div class="strength-bar"><div class="strength-fill" id="strength-fill" style="width:0%"></div></div>
-          <span class="strength-label" id="strength-label"></span>
-        </div>
-      </div>
-      <div class="input-group">
-        <label>Referral Code (optional)</label>
-        <div class="input-wrapper">
-          <input class="input-field" type="text" id="reg-ref" placeholder="Enter referral username" value="${ref}" />
-          <span class="input-icon">🎁</span>
-        </div>
-      </div>
-      <div class="remember-row">
-        <label><input type="checkbox" id="terms" required /> I agree to Terms of Service</label>
-      </div>
-      <button type="submit" class="btn btn-primary btn-full btn-lg" id="register-btn">
-        Create My Account ✨
-      </button>
-    </form>
-    <div class="auth-footer">
-      Already have an account? <a onclick="renderAuth('login')">Sign in</a>
-    </div>
-  `;
+  if (!email||!password) { toast('Please enter email and password 💔','error'); return; }
+
+  setLoading(btn, true);
+
+  try {
+    // Get user by email
+    var res = await db.from('profiles').select('*').eq('email', email).single();
+
+    if (res.error || !res.data) {
+      toast('No account found with that email 💔 Please register first.','error');
+      setLoading(btn, false);
+      return;
+    }
+
+    var user = res.data;
+
+    // Check password
+    var hashed = await hashPassword(password);
+    if (hashed !== user.password_hash) {
+      toast('Wrong password 💔 Please try again.','error');
+      setLoading(btn, false);
+      return;
+    }
+
+    // ✅ Login success
+    Store.user = user;
+    Store.profile = user;
+    localStorage.setItem('rae_session', JSON.stringify({ id: user.id, email: user.email }));
+    await Store.loadCart();
+
+    setLoading(btn, false);
+    toast('Welcome back, gorgeous! 💜');
+    navigate('home');
+
+  } catch(err) {
+    setLoading(btn, false);
+    console.error('Login error:', err);
+    toast('Something went wrong. Please try again 💔','error');
+  }
 }
 
 function updatePasswordStrength() {
-  const pw = document.getElementById('auth-password')?.value || '';
-  const fill = document.getElementById('strength-fill');
-  const label = document.getElementById('strength-label');
-  if (!fill || !label) return;
-  let score = 0;
-  if (pw.length >= 8) score++;
-  if (/[A-Z]/.test(pw)) score++;
-  if (/[0-9]/.test(pw)) score++;
-  if (/[^A-Za-z0-9]/.test(pw)) score++;
-  const levels = [
-    { pct: '0%', color: 'transparent', text: '' },
-    { pct: '25%', color: '#ff4444', text: 'Weak 😟' },
-    { pct: '50%', color: '#ffaa00', text: 'Fair 🤔' },
-    { pct: '75%', color: '#7B2EFF', text: 'Good 💜' },
-    { pct: '100%', color: '#00F5FF', text: 'Strong 💪' },
-  ];
-  const { pct, color, text } = levels[score];
-  fill.style.width = pct; fill.style.background = color;
-  label.textContent = text;
+  var pw = (document.getElementById('auth-password')||{}).value||'';
+  var fill=document.getElementById('strength-fill'), lbl=document.getElementById('strength-label');
+  if(!fill||!lbl) return;
+  var s=0;
+  if(pw.length>=6)s++; if(/[A-Z]/.test(pw))s++; if(/[0-9]/.test(pw))s++; if(/[^A-Za-z0-9]/.test(pw))s++;
+  var lvl=[{p:'0%',c:'transparent',t:''},{p:'25%',c:'#ff4444',t:'Weak 😟'},{p:'50%',c:'#ffaa00',t:'Fair 🤔'},{p:'75%',c:'#7B2EFF',t:'Good 💜'},{p:'100%',c:'#00F5FF',t:'Strong 💪'}][s];
+  fill.style.width=lvl.p; fill.style.background=lvl.c; lbl.textContent=lvl.t;
 }
 
 function togglePw(id, icon) {
-  const input = document.getElementById(id);
-  if (!input) return;
-  input.type = input.type === 'password' ? 'text' : 'password';
-  icon.textContent = input.type === 'password' ? '👁' : '🙈';
-}
-
-async function handleLogin(e) {
-  e.preventDefault();
-  const btn = document.getElementById('login-btn');
-  const email = document.getElementById('login-email').value.trim();
-  const password = document.getElementById('login-password').value;
-  setLoading(btn, true);
-  const { error } = await db.auth.signInWithPassword({ email, password });
-  setLoading(btn, false);
-  if (error) { toast(error.message, 'error'); return; }
-  toast('Welcome back, gorgeous! 💜');
-  navigate('home');
-}
-
-async function handleRegister(e) {
-  e.preventDefault();
-  const btn = document.getElementById('register-btn');
-  const username = document.getElementById('reg-username').value.trim();
-  const email = document.getElementById('reg-email').value.trim();
-  const phone = document.getElementById('reg-phone').value.trim();
-  const password = document.getElementById('auth-password').value;
-  const refBy = document.getElementById('reg-ref').value.trim();
-
-  setLoading(btn, true);
-
-  // Check username uniqueness
-  const { data: existing } = await db.from('profiles').select('id').eq('username', username).single();
-  if (existing) { toast('Username already taken 💔', 'error'); setLoading(btn, false); return; }
-
-  const { data: authData, error } = await db.auth.signUp({ email, password });
-  if (error) { toast(error.message, 'error'); setLoading(btn, false); return; }
-
-  const userId = authData.user?.id;
-  if (userId) {
-    await db.from('profiles').insert({
-      id: userId, username, email, phone,
-      referred_by: refBy || null,
-      role: 'user', wallet_balance: 0,
-      total_spent: 0, referral_count: 0,
-    });
-
-    // Credit referrer if valid
-    if (refBy) {
-      const { data: referrer } = await db.from('profiles').select('id').eq('username', refBy).single();
-      if (referrer) {
-        await db.from('profiles').update({ referral_count: db.sql`referral_count + 1` }).eq('id', referrer.id);
-      }
-    }
-  }
-
-  setLoading(btn, false);
-  toast('Account created! Welcome to the family 💜✨');
-  navigate('home');
-}
-
-function renderForgotPassword() {
-  toast('Password reset link sent to your email 📧', 'info');
+  var el=document.getElementById(id); if(!el) return;
+  el.type=el.type==='password'?'text':'password';
+  icon.textContent=el.type==='password'?'👁':'🙈';
 }
 
 // ═══════════════════════════════════════════════════════
@@ -3535,18 +3521,7 @@ async function initApp() {
   try { renderNavbar(); } catch(e) { console.warn('Navbar err:', e); }
   try { renderChatbot(); } catch(e) { console.warn('Chatbot err:', e); }
 
-  // Auth listener
-  try {
-    db.auth.onAuthStateChange(function(event, session) {
-      if (event === 'SIGNED_IN') {
-        Store.loadUser().then(function() { renderNavbar(); });
-      } else if (event === 'SIGNED_OUT') {
-        Store.user = null; Store.profile = null;
-        Store.cart = []; Store.cartCount = 0;
-        renderNavbar();
-      }
-    });
-  } catch(e) { console.warn('Auth listener err:', e); }
+  // Session loaded via localStorage — no Supabase Auth listener needed
 
   try { routeTo(getRoutePage()); } catch(e) { console.warn('Route err:', e); renderHome(); }
 
@@ -3579,7 +3554,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }, 100);
 });
-
 
   </script>
 </body>
