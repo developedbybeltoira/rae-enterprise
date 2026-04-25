@@ -1,242 +1,236 @@
-// ═══════════════════════════════════════════════════════
-// RAE ENTERPRISE — Auth (Login + Register)
-// ═══════════════════════════════════════════════════════
+// RAE ENTERPRISE — Auth
+// Username + password against profiles table
+// Password protected with SHA-256 (Web Crypto — works in all browsers)
 
-function renderAuth(mode = 'login') {
-  const ref = new URLSearchParams(window.location.search).get('ref') || '';
-  document.getElementById('app').innerHTML = `
-    <div class="auth-page page-enter">
-      <!-- Left illustration -->
-      <div class="auth-left">
-        <div class="auth-illustration">
-          <div class="auth-mascot">
-            <img src="logo.png" alt="Rae" onerror="this.outerHTML='<div class=auth-mascot-placeholder>🐺</div>'" />
-          </div>
-          <h2 class="text-gradient">Shop Smarter.<br/>Live Prettier.</h2>
-          <p>Welcome to Rae Enterprise — your luxury shopping haven with exclusive deals, rewards, and a touch of magic ✨</p>
-          <div class="auth-features">
-            <div class="auth-feature"><span class="auth-feature-icon">💜</span> Earn rewards on every referral</div>
-            <div class="auth-feature"><span class="auth-feature-icon">✨</span> Level up from Bronze to Gold</div>
-            <div class="auth-feature"><span class="auth-feature-icon">🎁</span> Flash sales & exclusive deals</div>
-            <div class="auth-feature"><span class="auth-feature-icon">🛡️</span> Secure & trusted shopping</div>
-          </div>
-        </div>
-      </div>
+async function sha256(str) {
+  var buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(function(b){ return ('00'+b.toString(16)).slice(-2); }).join('');
+}
 
-      <!-- Right form -->
-      <div class="auth-right">
-        <div class="auth-card glow-border">
-          <div class="auth-header">
-            <div class="auth-welcome-headline" id="auth-typing-headline"></div>
-            <p>Your glamorous shopping journey starts here 💅</p>
-          </div>
+function renderAuth(mode) {
+  mode = mode || 'login';
+  document.getElementById('app').innerHTML =
+    '<div class="auth-page page-enter">' +
+    '<div class="auth-left"><div class="auth-illustration">' +
+    '<div class="auth-mascot"><img src="logo.png" alt="Rae" onerror="this.style.display=\'none\'" /></div>' +
+    '<h2 class="text-gradient">Shop Smarter.<br/>Live Prettier.</h2>' +
+    '<p style="color:var(--text-secondary);line-height:1.7">Luxury deals, referral rewards & exclusive drops \u2728</p>' +
+    '<div class="auth-features">' +
+    '<div class="auth-feature"><span class="auth-feature-icon">💜</span> Earn up to \u20a610,000 per referral</div>' +
+    '<div class="auth-feature"><span class="auth-feature-icon">\u2728</span> Bronze \u2192 Silver \u2192 Gold</div>' +
+    '<div class="auth-feature"><span class="auth-feature-icon">🔥</span> Daily flash sales</div>' +
+    '<div class="auth-feature"><span class="auth-feature-icon">🛡\ufe0f</span> Safe & trusted checkout</div>' +
+    '</div></div></div>' +
+    '<div class="auth-right"><div class="auth-card glow-border">' +
+    '<div class="auth-header">' +
+    '<div class="auth-welcome-headline" id="auth-hl">Welcome to Rae Enterprise \u2728</div>' +
+    '<p style="color:var(--text-secondary);font-size:0.875rem">Your glamorous journey starts here \ud83d\udc85</p>' +
+    '</div>' +
+    '<div class="auth-tabs">' +
+    '<button class="auth-tab '+(mode==='login'?'active':'')+'" onclick="renderAuth(\'login\')">Sign In</button>' +
+    '<button class="auth-tab '+(mode==='register'?'active':'')+'" onclick="renderAuth(\'register\')">Join Free</button>' +
+    '</div>' +
+    (mode==='login' ? loginFormHTML() : registerFormHTML()) +
+    '</div></div></div>';
 
-          <div class="auth-tabs">
-            <button class="auth-tab ${mode === 'login' ? 'active' : ''}" onclick="renderAuth('login')">Sign In</button>
-            <button class="auth-tab ${mode === 'register' ? 'active' : ''}" onclick="renderAuth('register')">Join Free</button>
-          </div>
-
-          ${ref ? `
-            <div class="referral-notice">🎁 You were referred by <strong>${ref}</strong> — welcome bonus unlocked!</div>
-          ` : ''}
-
-          ${mode === 'login' ? renderLoginForm() : renderRegisterForm(ref)}
-        </div>
-      </div>
-    </div>
-  `;
-
-  // Typing animation
-  const headline = document.getElementById('auth-typing-headline');
-  if (headline) {
-    const phrases = [
-      'Welcome to Rae Enterprise ✨',
-      'Hello Beautiful Shopper 💜',
-      'Discover Luxury Deals 🛍️',
-      'Your Glam Starts Here 💅',
-      'Shop. Slay. Repeat. 🌟',
-    ];
-    animatePlaceholder({ setAttribute: (attr, val) => { if (attr === 'placeholder') headline.textContent = val; } }, phrases, 70);
-    // Force initial text
-    headline.textContent = phrases[0];
-  }
-
-  // Password strength listener
-  const pwField = document.getElementById('auth-password');
-  if (pwField) {
-    pwField.addEventListener('input', updatePasswordStrength);
+  // Typing headline
+  var hl = document.getElementById('auth-hl');
+  if (hl) {
+    var pp=['Welcome to Rae Enterprise \u2728','Hello Beautiful Shopper 💜','Discover Luxury Deals 🛍️','Your Glam Starts Here 💅','Shop. Slay. Repeat. 🌟'];
+    var pi=0,ci=pp[0].length,dl=false;
+    function tick(){
+      if(!document.getElementById('auth-hl'))return;
+      var p=pp[pi];
+      if(!dl){hl.textContent=p.slice(0,++ci);if(ci===p.length){dl=true;setTimeout(tick,1800);return;}}
+      else{hl.textContent=p.slice(0,--ci);if(ci===0){dl=false;pi=(pi+1)%pp.length;}}
+      setTimeout(tick,dl?35:75);
+    }
+    setTimeout(tick,2000);
   }
 }
 
-function renderLoginForm() {
-  return `
-    <form onsubmit="handleLogin(event)">
-      <div class="input-group">
-        <label>Email Address</label>
-        <div class="input-wrapper">
-          <input class="input-field" type="email" id="login-email" placeholder="gorgeous@email.com" required />
-          <span class="input-icon">📧</span>
-        </div>
-      </div>
-      <div class="input-group">
-        <label>Password</label>
-        <div class="input-wrapper">
-          <input class="input-field" type="password" id="login-password" placeholder="Your secret password" required />
-          <span class="input-icon" onclick="togglePw('login-password', this)" style="cursor:pointer">👁</span>
-        </div>
-      </div>
-      <div class="remember-row">
-        <label><input type="checkbox" id="remember" /> Remember me</label>
-        <a href="#" onclick="renderForgotPassword()">Forgot password?</a>
-      </div>
-      <button type="submit" class="btn btn-primary btn-full btn-lg" id="login-btn">
-        Sign In ✨
-      </button>
-    </form>
-    <div class="auth-footer">
-      Don't have an account? <a onclick="renderAuth('register')">Join for free!</a>
-    </div>
-  `;
+function loginFormHTML() {
+  return '<form onsubmit="doLogin(event)">' +
+    '<div class="input-group"><label>Username</label>' +
+    '<div class="input-wrapper"><input class="input-field" type="text" id="l-user" placeholder="your_username" required autocomplete="username"/>' +
+    '<span class="input-icon">💜</span></div></div>' +
+    '<div class="input-group"><label>Password</label>' +
+    '<div class="input-wrapper"><input class="input-field" type="password" id="l-pw" placeholder="Your password" required autocomplete="current-password"/>' +
+    '<span class="input-icon" onclick="togglePw(\'l-pw\',this)" style="cursor:pointer">👁</span></div></div>' +
+    '<button type="submit" class="btn btn-primary btn-full btn-lg" id="l-btn">Sign In \u2728</button>' +
+    '</form>' +
+    '<div class="auth-footer">No account? <span style="color:var(--neon-purple-light);cursor:pointer;font-weight:700" onclick="renderAuth(\'register\')">Join free!</span></div>';
 }
 
-function renderRegisterForm(ref = '') {
-  return `
-    <form onsubmit="handleRegister(event)">
-      <div class="input-group">
-        <label>Username</label>
-        <div class="input-wrapper">
-          <input class="input-field" type="text" id="reg-username" placeholder="your_glamorous_name" required minlength="3" />
-          <span class="input-icon">💜</span>
-        </div>
-      </div>
-      <div class="input-group">
-        <label>Email Address</label>
-        <div class="input-wrapper">
-          <input class="input-field" type="email" id="reg-email" placeholder="gorgeous@email.com" required />
-          <span class="input-icon">📧</span>
-        </div>
-      </div>
-      <div class="input-group">
-        <label>Phone Number</label>
-        <div class="input-wrapper">
-          <input class="input-field" type="tel" id="reg-phone" placeholder="08012345678" required />
-          <span class="input-icon">📱</span>
-        </div>
-      </div>
-      <div class="input-group">
-        <label>Password</label>
-        <div class="input-wrapper">
-          <input class="input-field" type="password" id="auth-password" placeholder="Min 8 characters" required minlength="8" />
-          <span class="input-icon" onclick="togglePw('auth-password', this)" style="cursor:pointer">👁</span>
-        </div>
-        <div class="password-strength">
-          <div class="strength-bar"><div class="strength-fill" id="strength-fill" style="width:0%"></div></div>
-          <span class="strength-label" id="strength-label"></span>
-        </div>
-      </div>
-      <div class="input-group">
-        <label>Referral Code (optional)</label>
-        <div class="input-wrapper">
-          <input class="input-field" type="text" id="reg-ref" placeholder="Enter referral username" value="${ref}" />
-          <span class="input-icon">🎁</span>
-        </div>
-      </div>
-      <div class="remember-row">
-        <label><input type="checkbox" id="terms" required /> I agree to Terms of Service</label>
-      </div>
-      <button type="submit" class="btn btn-primary btn-full btn-lg" id="register-btn">
-        Create My Account ✨
-      </button>
-    </form>
-    <div class="auth-footer">
-      Already have an account? <a onclick="renderAuth('login')">Sign in</a>
-    </div>
-  `;
+function registerFormHTML() {
+  return '<form onsubmit="doRegister(event)">' +
+    '<div class="input-group"><label>Username</label>' +
+    '<div class="input-wrapper"><input class="input-field" type="text" id="r-user" placeholder="your_glamorous_name" required minlength="3" autocomplete="username"/>' +
+    '<span class="input-icon">💜</span></div></div>' +
+    '<div class="input-group"><label>Email</label>' +
+    '<div class="input-wrapper"><input class="input-field" type="email" id="r-email" placeholder="gorgeous@email.com" required autocomplete="email"/>' +
+    '<span class="input-icon">📧</span></div></div>' +
+    '<div class="input-group"><label>Phone</label>' +
+    '<div class="input-wrapper"><input class="input-field" type="tel" id="r-phone" placeholder="08012345678" required/>' +
+    '<span class="input-icon">📱</span></div></div>' +
+    '<div class="input-group"><label>Password</label>' +
+    '<div class="input-wrapper"><input class="input-field" type="password" id="r-pw" placeholder="Choose a strong password" required minlength="4" autocomplete="new-password"/>' +
+    '<span class="input-icon" onclick="togglePw(\'r-pw\',this)" style="cursor:pointer">👁</span></div>' +
+    '<div class="password-strength"><div class="strength-bar"><div class="strength-fill" id="s-fill" style="width:0%"></div></div>' +
+    '<span id="s-lbl" style="font-size:0.75rem;color:var(--text-muted)"></span></div></div>' +
+    '<div class="input-group"><label>Referral Code <span style="color:var(--text-muted);font-weight:400">(optional)</span></label>' +
+    '<div class="input-wrapper"><input class="input-field" type="text" id="r-ref" placeholder="Friend\'s username"/>' +
+    '<span class="input-icon">🎁</span></div></div>' +
+    '<button type="submit" class="btn btn-primary btn-full btn-lg" id="r-btn">Create Account \u2728</button>' +
+    '</form>' +
+    '<div class="auth-footer">Have account? <span style="color:var(--neon-purple-light);cursor:pointer;font-weight:700" onclick="renderAuth(\'login\')">Sign in</span></div>';
 }
 
-function updatePasswordStrength() {
-  const pw = document.getElementById('auth-password')?.value || '';
-  const fill = document.getElementById('strength-fill');
-  const label = document.getElementById('strength-label');
-  if (!fill || !label) return;
-  let score = 0;
-  if (pw.length >= 8) score++;
-  if (/[A-Z]/.test(pw)) score++;
-  if (/[0-9]/.test(pw)) score++;
-  if (/[^A-Za-z0-9]/.test(pw)) score++;
-  const levels = [
-    { pct: '0%', color: 'transparent', text: '' },
-    { pct: '25%', color: '#ff4444', text: 'Weak 😟' },
-    { pct: '50%', color: '#ffaa00', text: 'Fair 🤔' },
-    { pct: '75%', color: '#7B2EFF', text: 'Good 💜' },
-    { pct: '100%', color: '#00F5FF', text: 'Strong 💪' },
-  ];
-  const { pct, color, text } = levels[score];
-  fill.style.width = pct; fill.style.background = color;
-  label.textContent = text;
+// ── REGISTER ─────────────────────────────────────────
+async function doRegister(e) {
+  e.preventDefault();
+  var btn      = document.getElementById('r-btn');
+  var username = (document.getElementById('r-user').value  || '').trim();
+  var email    = (document.getElementById('r-email').value || '').trim().toLowerCase();
+  var phone    = (document.getElementById('r-phone').value || '').trim();
+  var password = (document.getElementById('r-pw').value    || '').trim();
+  var refBy    = (document.getElementById('r-ref').value   || '').trim();
+
+  if (!username || !email || !phone || !password) {
+    toast('Please fill all fields 💔', 'error'); return;
+  }
+
+  setLoading(btn, true);
+
+  try {
+    // Check username not taken
+    var uChk = await db.from('profiles').select('id').eq('username', username);
+    if (uChk.data && uChk.data.length > 0) {
+      toast('Username taken — try another 💔', 'error');
+      setLoading(btn, false); return;
+    }
+
+    // Check email not taken
+    var eChk = await db.from('profiles').select('id').eq('email', email);
+    if (eChk.data && eChk.data.length > 0) {
+      toast('Email already registered — please sign in 💜', 'warn');
+      setLoading(btn, false); renderAuth('login'); return;
+    }
+
+    // Hash password with SHA-256
+    var hashed = await sha256(password);
+
+    // Insert user
+    var ins = await db.from('profiles').insert({
+      username:       username,
+      email:          email,
+      phone:          phone,
+      password:       hashed,
+      referred_by:    refBy || null,
+      role:           'user',
+      wallet_balance: 0,
+      total_spent:    0,
+      referral_count: 0,
+      created_at:     new Date().toISOString()
+    }).select().single();
+
+    if (ins.error || !ins.data) {
+      var errMsg = ins.error ? ins.error.message : 'Insert failed';
+      // If still RLS error, show clear instructions
+      if (errMsg.toLowerCase().indexOf('security') !== -1 || errMsg.toLowerCase().indexOf('policy') !== -1) {
+        toast('Database not set up yet! Please run supabase_setup.sql first.', 'error');
+      } else {
+        toast('Registration failed: ' + errMsg, 'error');
+      }
+      setLoading(btn, false); return;
+    }
+
+    // Credit referrer
+    if (refBy) {
+      try {
+        var rr = await db.from('profiles').select('id,referral_count').eq('username', refBy).single();
+        if (rr.data) await db.from('profiles').update({ referral_count: (rr.data.referral_count||0)+1 }).eq('id', rr.data.id);
+      } catch(re) {}
+    }
+
+    // Log in
+    Store.user = ins.data; Store.profile = ins.data;
+    sessionStorage.setItem('rae_uid', ins.data.id);
+    await Store.loadCart();
+    renderNavbar();
+    setLoading(btn, false);
+    toast('Welcome to the family! 💜\u2728');
+    navigate('home');
+
+  } catch(err) {
+    setLoading(btn, false);
+    toast('Error: ' + (err.message || 'unknown'), 'error');
+    console.error(err);
+  }
+}
+
+// ── LOGIN ─────────────────────────────────────────────
+async function doLogin(e) {
+  e.preventDefault();
+  var btn      = document.getElementById('l-btn');
+  var username = (document.getElementById('l-user').value || '').trim();
+  var password = (document.getElementById('l-pw').value   || '').trim();
+
+  if (!username || !password) {
+    toast('Enter username and password 💔', 'error'); return;
+  }
+
+  setLoading(btn, true);
+
+  try {
+    // Hash the entered password
+    var hashed = await sha256(password);
+
+    // Check username exists first
+    var uRes = await db.from('profiles').select('id,password').eq('username', username).single();
+
+    if (uRes.error || !uRes.data) {
+      toast('Username not found 💔 Please register first.', 'error');
+      setLoading(btn, false); return;
+    }
+
+    // Compare hashed passwords
+    if (uRes.data.password !== hashed) {
+      toast('Wrong password 💔 Please try again.', 'error');
+      setLoading(btn, false); return;
+    }
+
+    // Fetch full profile
+    var full = await db.from('profiles').select('*').eq('username', username).single();
+    Store.user = full.data; Store.profile = full.data;
+    sessionStorage.setItem('rae_uid', full.data.id);
+    await Store.loadCart();
+    renderNavbar();
+    setLoading(btn, false);
+    toast('Welcome back, gorgeous! 💜');
+    navigate('home');
+
+  } catch(err) {
+    setLoading(btn, false);
+    toast('Error: ' + (err.message || 'unknown'), 'error');
+    console.error(err);
+  }
 }
 
 function togglePw(id, icon) {
-  const input = document.getElementById(id);
-  if (!input) return;
-  input.type = input.type === 'password' ? 'text' : 'password';
-  icon.textContent = input.type === 'password' ? '👁' : '🙈';
+  var el = document.getElementById(id); if (!el) return;
+  el.type = el.type === 'password' ? 'text' : 'password';
+  icon.textContent = el.type === 'password' ? '👁' : '🙈';
 }
 
-async function handleLogin(e) {
-  e.preventDefault();
-  const btn = document.getElementById('login-btn');
-  const email = document.getElementById('login-email').value.trim();
-  const password = document.getElementById('login-password').value;
-  setLoading(btn, true);
-  const { error } = await db.auth.signInWithPassword({ email, password });
-  setLoading(btn, false);
-  if (error) { toast(error.message, 'error'); return; }
-  toast('Welcome back, gorgeous! 💜');
-  navigate('home');
-}
-
-async function handleRegister(e) {
-  e.preventDefault();
-  const btn = document.getElementById('register-btn');
-  const username = document.getElementById('reg-username').value.trim();
-  const email = document.getElementById('reg-email').value.trim();
-  const phone = document.getElementById('reg-phone').value.trim();
-  const password = document.getElementById('auth-password').value;
-  const refBy = document.getElementById('reg-ref').value.trim();
-
-  setLoading(btn, true);
-
-  // Check username uniqueness
-  const { data: existing } = await db.from('profiles').select('id').eq('username', username).single();
-  if (existing) { toast('Username already taken 💔', 'error'); setLoading(btn, false); return; }
-
-  const { data: authData, error } = await db.auth.signUp({ email, password });
-  if (error) { toast(error.message, 'error'); setLoading(btn, false); return; }
-
-  const userId = authData.user?.id;
-  if (userId) {
-    await db.from('profiles').insert({
-      id: userId, username, email, phone,
-      referred_by: refBy || null,
-      role: 'user', wallet_balance: 0,
-      total_spent: 0, referral_count: 0,
-    });
-
-    // Credit referrer if valid
-    if (refBy) {
-      const { data: referrer } = await db.from('profiles').select('id').eq('username', refBy).single();
-      if (referrer) {
-        await db.from('profiles').update({ referral_count: db.sql`referral_count + 1` }).eq('id', referrer.id);
-      }
-    }
-  }
-
-  setLoading(btn, false);
-  toast('Account created! Welcome to the family 💜✨');
-  navigate('home');
-}
-
-function renderForgotPassword() {
-  toast('Password reset link sent to your email 📧', 'info');
-}
+// Password strength meter
+document.addEventListener('input', function(e) {
+  if (e.target.id !== 'r-pw') return;
+  var pw = e.target.value;
+  var s = 0;
+  if (pw.length >= 6) s++; if (/[A-Z]/.test(pw)) s++; if (/[0-9]/.test(pw)) s++; if (/[^A-Za-z0-9]/.test(pw)) s++;
+  var lvl = [{p:'0%',c:'transparent',t:''},{p:'25%',c:'#ff4444',t:'Weak'},{p:'50%',c:'#ffaa00',t:'Fair'},{p:'75%',c:'#7B2EFF',t:'Good 💜'},{p:'100%',c:'#00F5FF',t:'Strong 💪'}][s];
+  var f=document.getElementById('s-fill'), l=document.getElementById('s-lbl');
+  if(f){f.style.width=lvl.p;f.style.background=lvl.c;}
+  if(l)l.textContent=lvl.t;
+});

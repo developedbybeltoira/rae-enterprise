@@ -1,191 +1,108 @@
-// ═══════════════════════════════════════════════════════
-// RAE ENTERPRISE — AI Chatbot Widget
-// ═══════════════════════════════════════════════════════
+// RAE ENTERPRISE — AI Support Chatbot (support icon, moved up)
 
-let chatOpen = false;
-const chatHistory = [];
-
-const BOT_RESPONSES = {
-  greeting: [
-    "Hey gorgeous! 💜 Welcome to Rae Enterprise! How can I help you today?",
-    "Hello beautiful! ✨ I'm Rae, your personal shopping assistant. What can I do for you?",
-  ],
-  deals: [
-    "🔥 We have amazing flash deals right now — up to 70% OFF! Check the homepage banner for the countdown ⏱",
-    "✨ Our best deals are in the Fashion and Beauty categories. Type 'show deals' to browse!",
-  ],
-  track: [
-    "📦 To track your order, visit My Account → My Orders. You'll see a live progress bar for each order!",
-    "Your orders are tracked in real-time! Go to the Orders page in your dashboard 💜",
-  ],
-  referral: [
-    "🎁 Our referral program is amazing! Share your link and earn ₦1,000 for ₦10K purchases, and ₦10,000 for ₦100K purchases!",
-    "Refer friends and earn wallet rewards! Visit the Referral section in your dashboard to get your unique link 💜",
-  ],
-  payment: [
-    "💳 We accept bank transfers to OPay (Account: 8166666667, Rae Enterprises). Upload your proof and we'll approve your order!",
-    "Payment is via bank transfer to our OPay account. After payment, upload the screenshot and we'll process your order within 24hrs ✨",
-  ],
-  support: [
-    "📞 You can reach us at 08117706203 or WhatsApp us for faster response! We're here 24/7 💜",
-    "Need human support? Call 08117706203 or click the WhatsApp button! We love hearing from you 💅",
-  ],
-  wallet: [
-    "💰 Your wallet balance can be used to pay for orders directly — no transfer needed! Earn via referrals and bonuses.",
-    "Your wallet earns from referral rewards and admin bonuses. Use it at checkout for instant payment! ✨",
-  ],
-  default: [
-    "I'm not sure about that 💔 But I can help with: deals, orders, payment, referrals, or connect you with our support team!",
-    "Hmm, let me think... 🤔 Try asking about our deals, how to track orders, or our referral program!",
-    "I'm still learning! 💜 For that question, please contact us at 08117706203 or WhatsApp.",
-  ],
+var chatOpen = false;
+var chatHistory = [];
+var BOT = {
+  greet: ['Hey gorgeous! 💜 I\'m your Rae support assistant. How can I help?','Hello beautiful! \u2728 Need help with an order, deals, or anything else?'],
+  deals: ['🔥 Flash deals are live right now — up to 70% OFF! Check the countdown on the homepage.','✨ Best deals are in Fashion & Beauty. Use the category filter to browse!'],
+  track: ['📦 Track your orders in My Account → My Orders. You\'ll see a live progress bar for each order!','Go to the Orders tab in your bottom menu to track any order in real-time 💜'],
+  referral: ['🎁 Share your referral link and earn ₦1,000 for every ₦10K purchase your friend makes — and ₦10,000 for ₦100K!','Visit the Referral section in your dashboard to get your unique link and share via WhatsApp 💜'],
+  payment: ['💳 Transfer to OPay account: 8166666667 (Rae Enterprises). Upload your payment screenshot when checking out.','We accept bank transfers. After payment, upload proof and orders are approved within 24hrs \u2728'],
+  support: ['📞 Call or WhatsApp us: 08117706203. We\'re always available for you 💜','Tap the Call or WhatsApp buttons at the bottom of the homepage anytime!'],
+  wallet: ['💰 Your wallet earns from referral rewards and admin bonuses. Use it to pay for orders instantly — no transfer needed!','Wallet credits never expire and can be used on any purchase. Check your balance in the Wallet tab \u2728'],
+  size: ['👗 Select your size on the product page before adding to cart. Available sizes: S, M, L, XL for clothing and 39-45 for shoes.','Size options appear on each product page. Your selected size is saved with your order \u2728'],
+  fallback: ['I\'m not sure about that 💔 I can help with: deals, orders, payment, referrals, sizes, or support!','Try asking about our deals, tracking orders, or our referral program 💜','For more help, contact us on 08117706203 or WhatsApp!']
 };
 
-const QUICK_REPLIES = ['🔥 Flash Deals', '📦 Track Order', '🎁 Referrals', '💳 Payment Info', '📞 Support'];
-
 function renderChatbot() {
-  const widget = document.getElementById('chatbot-widget');
-  widget.innerHTML = `
-    <button class="chatbot-toggle" id="chatbot-btn" onclick="toggleChat()">
-      <span id="chat-icon">💜</span>
-      <div class="chatbot-notif" id="chat-notif"></div>
-    </button>
-    <div class="chatbot-window hidden" id="chatbot-window">
-      <div class="chatbot-header">
-        <div class="chatbot-avatar">✨</div>
-        <div class="chatbot-header-info">
-          <div class="chatbot-header-name">Rae Assistant</div>
-          <div class="chatbot-header-status">● Online — Always here for you</div>
-        </div>
-        <button class="chatbot-close" onclick="toggleChat()">✕</button>
-      </div>
-      <div class="chatbot-messages" id="chatbot-messages">
-        <!-- Messages rendered here -->
-      </div>
-      <div style="padding:0 16px 8px">
-        <div class="chatbot-quick-replies">
-          ${QUICK_REPLIES.map(q => `<button class="chatbot-quick-btn" onclick="sendQuick('${q}')">${q}</button>`).join('')}
-        </div>
-      </div>
-      <div class="chatbot-input-row">
-        <input class="chatbot-input" id="chat-input" placeholder="Ask me anything... 💜"
-          onkeydown="if(event.key==='Enter') sendChatMessage()" />
-        <button class="chatbot-send" onclick="sendChatMessage()">➤</button>
-      </div>
-    </div>
-  `;
+  var w = document.getElementById('chatbot-widget');
+  if (!w) return;
+  w.innerHTML =
+    '<button class="chatbot-toggle" id="chat-btn" onclick="toggleChat()">' +
+    '<span id="chat-ico">🎧</span>' +
+    '<div class="chatbot-notif" id="chat-notif" style="display:none"></div>' +
+    '</button>' +
+    '<div class="chatbot-window hidden" id="chat-win">' +
+    '<div class="chatbot-header">' +
+    '<div class="chatbot-avatar">🎧</div>' +
+    '<div class="chatbot-header-info"><div class="chatbot-header-name">Rae Support</div><div class="chatbot-header-status">● Always here for you</div></div>' +
+    '<button class="chatbot-close" onclick="toggleChat()">✕</button>' +
+    '</div>' +
+    '<div class="chatbot-messages" id="chat-msgs"></div>' +
+    '<div class="chatbot-quick-replies">' +
+    ['🔥 Deals','📦 Track Order','💳 Payment','🎁 Referrals','📞 Support'].map(function(q){
+      return '<button class="chatbot-quick-btn" onclick="sendQuick(\''+q+'\')">'+q+'</button>';
+    }).join('') +
+    '</div>' +
+    '<div class="chatbot-input-row">' +
+    '<input class="chatbot-input" id="chat-in" placeholder="Ask me anything... 💜" onkeydown="if(event.key===\'Enter\')sendChat()" />' +
+    '<button class="chatbot-send" onclick="sendChat()">➤</button>' +
+    '</div></div>';
 
-  // Greet after a delay if not yet opened
-  setTimeout(() => {
-    const notif = document.getElementById('chat-notif');
-    if (notif && !chatOpen) notif.style.display = 'flex';
-  }, 4000);
+  // Show notification dot after 5s
+  setTimeout(function() {
+    var n = document.getElementById('chat-notif');
+    if (n && !chatOpen) n.style.display = 'flex';
+  }, 5000);
 }
 
 function toggleChat() {
   chatOpen = !chatOpen;
-  const win = document.getElementById('chatbot-window');
-  const icon = document.getElementById('chat-icon');
-  const notif = document.getElementById('chat-notif');
-
-  win?.classList.toggle('hidden', !chatOpen);
-  if (icon) icon.textContent = chatOpen ? '✕' : '💜';
+  var win = document.getElementById('chat-win');
+  var ico = document.getElementById('chat-ico');
+  var notif = document.getElementById('chat-notif');
+  if (win) win.classList.toggle('hidden', !chatOpen);
+  if (ico) ico.textContent = chatOpen ? '✕' : '🎧';
   if (notif) notif.style.display = 'none';
-
   if (chatOpen && chatHistory.length === 0) {
-    setTimeout(() => {
-      addBotMessage(BOT_RESPONSES.greeting[0]);
-    }, 400);
+    setTimeout(function() { addBot(BOT.greet[0]); }, 350);
   }
-
-  if (chatOpen) {
-    setTimeout(() => document.getElementById('chat-input')?.focus(), 200);
-  }
+  if (chatOpen) setTimeout(function() { var el=document.getElementById('chat-in'); if(el) el.focus(); }, 200);
 }
 
-function addBotMessage(text, showTyping = true) {
-  const container = document.getElementById('chatbot-messages');
-  if (!container) return;
-
-  if (showTyping) {
-    const typing = document.createElement('div');
-    typing.className = 'chat-msg bot';
-    typing.id = 'chat-typing';
-    typing.innerHTML = `
-      <div class="chat-msg-avatar">✨</div>
-      <div class="chat-bubble">
-        <div class="chat-typing"><span></span><span></span><span></span></div>
-      </div>`;
-    container.appendChild(typing);
-    container.scrollTop = container.scrollHeight;
-
-    setTimeout(() => {
-      typing.remove();
-      renderBotBubble(text, container);
-    }, 900 + Math.random() * 500);
-  } else {
-    renderBotBubble(text, container);
-  }
+function addBot(text) {
+  var c = document.getElementById('chat-msgs'); if (!c) return;
+  // Show typing
+  var typing = document.createElement('div');
+  typing.className = 'chat-msg bot'; typing.id = 'chat-typing-ind';
+  typing.innerHTML = '<div class="chat-msg-av">🎧</div><div class="chat-bubble"><div class="chat-typing"><span></span><span></span><span></span></div></div>';
+  c.appendChild(typing); c.scrollTop = c.scrollHeight;
+  setTimeout(function() {
+    var t = document.getElementById('chat-typing-ind'); if (t) t.remove();
+    var msg = document.createElement('div');
+    msg.className = 'chat-msg bot';
+    msg.innerHTML = '<div class="chat-msg-av">🎧</div><div class="chat-bubble">'+text+'</div>';
+    c.appendChild(msg); c.scrollTop = c.scrollHeight;
+    chatHistory.push({role:'bot',text:text});
+  }, 700 + Math.random()*400);
 }
 
-function renderBotBubble(text, container) {
-  const msg = document.createElement('div');
-  msg.className = 'chat-msg bot';
-  msg.innerHTML = `
-    <div class="chat-msg-avatar">✨</div>
-    <div class="chat-bubble">${text}</div>`;
-  container.appendChild(msg);
-  container.scrollTop = container.scrollHeight;
-  chatHistory.push({ role: 'bot', text });
-}
-
-function addUserMessage(text) {
-  const container = document.getElementById('chatbot-messages');
-  if (!container) return;
-  const msg = document.createElement('div');
+function addUser(text) {
+  var c = document.getElementById('chat-msgs'); if (!c) return;
+  var msg = document.createElement('div');
   msg.className = 'chat-msg user';
-  msg.innerHTML = `<div class="chat-bubble">${text}</div>`;
-  container.appendChild(msg);
-  container.scrollTop = container.scrollHeight;
-  chatHistory.push({ role: 'user', text });
+  msg.innerHTML = '<div class="chat-bubble">'+text+'</div>';
+  c.appendChild(msg); c.scrollTop = c.scrollHeight;
+  chatHistory.push({role:'user',text:text});
 }
 
-function sendQuick(text) {
-  document.getElementById('chat-input').value = text;
-  sendChatMessage();
-}
+function sendQuick(t) { var el=document.getElementById('chat-in'); if(el){el.value=t;} sendChat(); }
 
-function sendChatMessage() {
-  const input = document.getElementById('chat-input');
-  const text = input?.value.trim();
-  if (!text) return;
-  input.value = '';
-
-  addUserMessage(text);
-
-  // Determine response
-  const lower = text.toLowerCase();
-  let response;
-
-  if (/hi|hello|hey|start|hola/.test(lower)) {
-    response = BOT_RESPONSES.greeting[Math.floor(Math.random() * BOT_RESPONSES.greeting.length)];
-  } else if (/deal|sale|discount|flash|offer/.test(lower)) {
-    response = BOT_RESPONSES.deals[Math.floor(Math.random() * BOT_RESPONSES.deals.length)];
-  } else if (/track|order|delivery|status|ship/.test(lower)) {
-    response = BOT_RESPONSES.track[Math.floor(Math.random() * BOT_RESPONSES.track.length)];
-  } else if (/refer|friend|link|earn|reward/.test(lower)) {
-    response = BOT_RESPONSES.referral[Math.floor(Math.random() * BOT_RESPONSES.referral.length)];
-  } else if (/pay|payment|bank|transfer|opay|proof/.test(lower)) {
-    response = BOT_RESPONSES.payment[Math.floor(Math.random() * BOT_RESPONSES.payment.length)];
-  } else if (/support|help|call|contact|whatsapp|phone/.test(lower)) {
-    response = BOT_RESPONSES.support[Math.floor(Math.random() * BOT_RESPONSES.support.length)];
-  } else if (/wallet|balance|credit|bonus/.test(lower)) {
-    response = BOT_RESPONSES.wallet[Math.floor(Math.random() * BOT_RESPONSES.wallet.length)];
-  } else if (/product|recommend|suggest|find|look/.test(lower)) {
-    response = `✨ I'd love to help you find products! Try browsing our categories on the homepage, or use the search bar to find exactly what you're looking for. We have Fashion, Beauty, Tech, Home & more! 💜`;
-  } else {
-    response = BOT_RESPONSES.default[Math.floor(Math.random() * BOT_RESPONSES.default.length)];
-  }
-
-  addBotMessage(response);
+function sendChat() {
+  var el = document.getElementById('chat-in'); if (!el) return;
+  var text = el.value.trim(); if (!text) return;
+  el.value = '';
+  addUser(text);
+  var l = text.toLowerCase();
+  var r;
+  if (/hi|hello|hey|start/.test(l)) r = BOT.greet;
+  else if (/deal|sale|discount|flash|offer/.test(l)) r = BOT.deals;
+  else if (/track|order|delivery|status|ship/.test(l)) r = BOT.track;
+  else if (/refer|friend|earn|reward|link/.test(l)) r = BOT.referral;
+  else if (/pay|bank|transfer|opay|proof/.test(l)) r = BOT.payment;
+  else if (/support|help|call|contact|whatsapp|phone/.test(l)) r = BOT.support;
+  else if (/wallet|balance|credit|bonus/.test(l)) r = BOT.wallet;
+  else if (/size|sizing|fit|small|medium|large/.test(l)) r = BOT.size;
+  else r = BOT.fallback;
+  addBot(r[Math.floor(Math.random()*r.length)]);
 }
