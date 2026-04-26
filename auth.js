@@ -59,7 +59,10 @@ function loginFormHTML() {
     '<span class="input-icon" onclick="togglePw(\'l-pw\',this)" style="cursor:pointer">👁</span></div></div>' +
     '<button type="submit" class="btn btn-primary btn-full btn-lg" id="l-btn">Sign In \u2728</button>' +
     '</form>' +
-    '<div class="auth-footer">No account? <span style="color:var(--neon-purple-light);cursor:pointer;font-weight:700" onclick="renderAuth(\'register\')">Join free!</span></div>';
+    '<div class="auth-footer">No account? <span style="color:var(--neon-purple-light);cursor:pointer;font-weight:700" onclick="renderAuth(\'register\')">Join free!</span></div>' +
+    '<div style="text-align:center;margin-top:20px">' +
+    '<span onclick="openAdminModal()" style="font-size:1.5rem;cursor:pointer;opacity:0.15;transition:opacity 0.3s;user-select:none;display:inline-block" onmouseenter="this.style.opacity=\'0.45\'" onmouseleave="this.style.opacity=\'0.15\'">\u2699\ufe0f</span>' +
+    '</div>';
 }
 
 function registerFormHTML() {
@@ -234,3 +237,47 @@ document.addEventListener('input', function(e) {
   if(f){f.style.width=lvl.p;f.style.background=lvl.c;}
   if(l)l.textContent=lvl.t;
 });
+
+
+// ── Secret Admin Modal ──
+function openAdminModal() {
+  var ov = document.createElement('div');
+  ov.className = 'overlay'; ov.id = 'admin-modal-ov';
+  ov.style.zIndex = '9999';
+  ov.innerHTML =
+    '<div class="modal" style="max-width:360px">' +
+    '<div style="text-align:center;margin-bottom:20px">' +
+    '<div style="font-size:2rem;margin-bottom:6px">\u2699\ufe0f</div>' +
+    '<h3 class="text-gradient" style="font-family:var(--font-display)">Admin Access</h3>' +
+    '</div>' +
+    '<div class="input-group"><label>Username</label>' +
+    '<input class="input-field" type="text" id="am-u" placeholder="Admin username" autocomplete="off" /></div>' +
+    '<div class="input-group"><label>Password</label>' +
+    '<div class="input-wrapper">' +
+    '<input class="input-field" type="password" id="am-p" placeholder="Admin password" autocomplete="off" onkeydown="if(event.key===\'Enter\')submitAdminModal()" />' +
+    '<span class="input-icon" onclick="togglePw(\'am-p\',this)" style="cursor:pointer">\ud83d\udc41</span>' +
+    '</div></div>' +
+    '<div style="display:flex;gap:10px;margin-top:4px">' +
+    '<button class="btn btn-primary" style="flex:1" onclick="submitAdminModal()">\u2192 Enter</button>' +
+    '<button class="btn btn-ghost" style="flex:1" onclick="document.getElementById(\'admin-modal-ov\').remove()">Cancel</button>' +
+    '</div></div>';
+  document.body.appendChild(ov);
+  ov.addEventListener('click', function(e){ if(e.target===ov) ov.remove(); });
+  setTimeout(function(){ var el=document.getElementById('am-u'); if(el) el.focus(); }, 100);
+}
+
+function submitAdminModal() {
+  var u = (document.getElementById('am-u').value || '').trim();
+  var p = (document.getElementById('am-p').value || '').trim();
+  if (u === 'Chinedu' && p === 'Jopoboy2010.') {
+    adminAuthed = true;
+    try { sessionStorage.setItem('rae_admin','1'); } catch(e){}
+    document.getElementById('admin-modal-ov').remove();
+    toast('Welcome, Admin Chinedu! \ud83d\udc9c');
+    navigate('admin');
+  } else {
+    toast('Wrong credentials \ud83d\udc94', 'error');
+    var el = document.getElementById('am-p');
+    if(el){ el.value=''; el.style.borderColor='var(--neon-pink)'; setTimeout(function(){ el.style.borderColor=''; },1000); }
+  }
+}
