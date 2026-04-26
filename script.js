@@ -77,6 +77,11 @@ async function initApp() {
 
   try { await Store.loadUser(); } catch(e) { console.warn('Session err:', e); }
 
+  // Restore admin session from sessionStorage
+  try {
+    if (sessionStorage.getItem('rae_admin') === '1') { adminAuthed = true; }
+  } catch(e) {}
+
   try { renderNavbar(); } catch(e) { console.warn('Navbar err:', e); }
   try { renderChatbot(); } catch(e) { console.warn('Chatbot err:', e); }
 
