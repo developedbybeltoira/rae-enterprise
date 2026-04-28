@@ -77,9 +77,10 @@ async function initApp() {
 
   try { await Store.loadUser(); } catch(e) { console.warn('Session err:', e); }
 
-  // Restore admin session from sessionStorage
+  // Restore admin session + auto-grant to Chinedu
   try {
     if (sessionStorage.getItem('rae_admin') === '1') { adminAuthed = true; }
+    if (Store.profile && Store.profile.username === 'Chinedu') { adminAuthed = true; sessionStorage.setItem('rae_admin','1'); }
   } catch(e) {}
 
   try { renderNavbar(); } catch(e) { console.warn('Navbar err:', e); }

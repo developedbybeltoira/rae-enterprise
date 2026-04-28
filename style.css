@@ -415,3 +415,34 @@ body {
   60%{transform:translateX(-6px);}
   80%{transform:translateX(6px);}
 }
+
+/* ── Premium Order Card ── */
+.premium-order-card {
+  background: linear-gradient(145deg, rgba(18,12,30,0.95), rgba(14,10,24,0.98));
+  border: 1px solid rgba(123,46,255,0.18);
+  border-radius: 20px;
+  padding: 22px 24px;
+  margin-bottom: 16px;
+  box-shadow: 0 4px 32px rgba(0,0,0,0.4), 0 1px 0 rgba(255,255,255,0.04) inset;
+  transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.2s;
+}
+.premium-order-card:hover {
+  border-color: rgba(123,46,255,0.35);
+  box-shadow: 0 8px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(123,46,255,0.15);
+  transform: translateY(-1px);
+}
+.premium-order-card:active { transform: scale(0.99); }
+
+/* Ripple */
+@keyframes rippleAnim {
+  from { transform: scale(0); opacity: 1; }
+  to   { transform: scale(4); opacity: 0; }
+}
+
+/* Print invoice clean */
+@media print {
+  body > *:not(#inv-printable):not(#pinv-ov) { display: none !important; }
+  #inv-printable { border: none !important; box-shadow: none !important; background: #fff !important; color: #000 !important; }
+  #inv-printable * { color: #000 !important; border-color: #ddd !important; }
+  .btn { display: none !important; }
+}

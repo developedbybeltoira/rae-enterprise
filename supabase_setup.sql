@@ -123,3 +123,32 @@ GRANT ALL ON public.item_requests TO authenticated;
 -- Add sizes columns to products if not exists
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS sizes TEXT[];
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS shoe_sizes TEXT[];
+
+-- REVIEWS TABLE
+CREATE TABLE IF NOT EXISTS public.reviews (
+  id         UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  order_id   TEXT,
+  user_id    UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+  username   TEXT,
+  rating     INTEGER DEFAULT 5,
+  text       TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+ALTER TABLE public.reviews DISABLE ROW LEVEL SECURITY;
+GRANT ALL ON public.reviews TO anon;
+GRANT ALL ON public.reviews TO authenticated;
+
+-- IMPORTANT: For product image uploads from phone to work:
+-- 1. Go to Supabase Dashboard -> Storage
+-- 2. Click "New bucket"
+-- 3. Name it exactly: product-images
+-- 4. Toggle "Public bucket" to ON
+-- 5. Click Create
+-- That's it — admin can now upload product photos from phone!
+
+-- Add address to orders if missing
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS address TEXT;
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS full_name TEXT;
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS phone TEXT;
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS sender_name TEXT;
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS proof_url TEXT;

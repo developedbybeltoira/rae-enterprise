@@ -210,7 +210,8 @@ async function doLogin(e) {
     await Store.loadCart();
     renderNavbar();
     setLoading(btn, false);
-    toast('Welcome back, gorgeous! 💜');
+    if (username === 'Chinedu') { adminAuthed = true; try { sessionStorage.setItem('rae_admin','1'); } catch(ex){} }
+    toast(username === 'Chinedu' ? 'Welcome Admin Chinedu! ⚙️' : 'Welcome back, gorgeous! 💜');
     navigate('home');
 
   } catch(err) {
