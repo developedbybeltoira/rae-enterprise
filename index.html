@@ -2150,8 +2150,8 @@ async function renderHome() {
     '<div style="text-align:center;padding:32px 24px;border-top:1px solid var(--glass-border)">' +
     '<p style="color:var(--text-muted);margin-bottom:14px">Need help? We\'re here for you 💜</p>' +
     '<div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">' +
-    '<a href="tel:08117706203" class="btn btn-ghost">📞 08117706203</a>' +
-    '<a href="https://wa.me/2348117706203" target="_blank" class="btn btn-ghost">💬 WhatsApp</a>' +
+    '<a href="tel:07055902601" class="btn btn-ghost">📞 07055902601</a>' +
+    '<a href="https://wa.me/2347055902601" target="_blank" class="btn btn-ghost">💬 WhatsApp</a>' +
     '</div></div>' +
     '</div>';
 
@@ -2446,7 +2446,7 @@ async function renderProduct(id) {
     '</div>' +
 
     '<div style="display:flex;flex-direction:column;gap:10px;margin-top:18px">' +
-    ['\ud83d\ude9a Free delivery on orders \u20a620K+','\ud83d\udd12 Secure payment via OPay','\u2705 Quality guaranteed or refund','\ud83d\udcde Support: 08117706203'].map(function(g) {
+    ['\ud83d\ude9a Free delivery on orders \u20a620K+','\ud83d\udd12 Secure payment via OPay','\u2705 Quality guaranteed or refund','\ud83d\udcde Support: 07055902601'].map(function(g) {
       return '<div style="display:flex;align-items:center;gap:10px;font-size:0.84rem;color:var(--text-secondary)">' + g + '</div>';
     }).join('') +
     '</div></div></div>' +
@@ -3049,7 +3049,7 @@ function buildPremiumOrderCard(o) {
       '<div style="background:rgba(255,46,46,0.08);border:1px solid rgba(255,46,46,0.2);border-radius:12px;padding:14px 18px;margin-bottom:14px;display:flex;align-items:center;gap:12px">' +
       '<div style="font-size:1.5rem">&#10060;</div>' +
       '<div><div style="font-weight:700;color:#ff4444;font-size:0.9rem">Order Cancelled</div>' +
-      '<div style="font-size:0.8rem;color:rgba(255,255,255,0.4);margin-top:2px">Contact us at 08117706203 for assistance</div></div>' +
+      '<div style="font-size:0.8rem;color:rgba(255,255,255,0.4);margin-top:2px">Contact us at 07055902601 for assistance</div></div>' +
       '</div>'
       :
     '') +
@@ -3315,7 +3315,7 @@ async function showPremiumInvoice(orderId) {
     '<div style="height:1px;background:rgba(255,255,255,0.04);margin-bottom:20px"></div>' +
     '<div style="text-align:center">' +
     '<div style="font-size:0.85rem;color:rgba(255,255,255,0.4);margin-bottom:8px">Thank you for shopping with Rae Enterprise</div>' +
-    '<div style="font-size:0.75rem;color:rgba(255,255,255,0.2)">08117706203 &nbsp;&bull;&nbsp; raeenterprise@email.com</div>' +
+    '<div style="font-size:0.75rem;color:rgba(255,255,255,0.2)">07055902601 &nbsp;&bull;&nbsp; raeenterprise@email.com</div>' +
     '</div>' +
 
     // Buttons
@@ -3583,7 +3583,7 @@ async function updateOrderStatus(sel) {
   var msgs = {
     awaiting_approval: '\ud83d\udcb3 We received your order! Awaiting payment confirmation.',
     approved:          '\u2705 Payment confirmed! Your order has been approved \ud83c\udf89',
-    cancelled:         '\u274c Your order has been cancelled. Contact us at 08117706203 for help.',
+    cancelled:         '\u274c Your order has been cancelled. Contact us at raeenterprise@gmail.com for help.',
     processing:        '\ud83d\udd27 Your item is being carefully prepared for shipment.',
     shipped:           '\ud83d\ude9a On the way to you! Your order has been shipped.',
     delivered:         '\ud83c\udf89 Delivered! We hope you love your purchase \ud83d\udc9c'
@@ -3622,7 +3622,7 @@ async function showInvoice(orderId) {
     '<div class="modal" style="max-width:500px">' +
     '<div style="text-align:center;padding-bottom:14px;margin-bottom:14px;border-bottom:1px solid var(--glass-border)">' +
     '<div style="font-family:var(--font-script);font-size:2rem;background:linear-gradient(135deg,#7B2EFF,#00F5FF);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Rae Enterprise</div>' +
-    '<div style="font-size:0.75rem;color:var(--text-muted)">Premium Shopping \u2014 Nigeria\'s Finest \u2022 \ud83d\udcde 08117706203</div>' +
+    '<div style="font-size:0.75rem;color:var(--text-muted)">Premium Shopping \u2014 Nigeria\'s Finest \u2022 \ud83d\udcde 07055902601</div>' +
     '</div>' +
     '<div style="display:flex;justify-content:space-between;margin-bottom:12px;font-size:0.82rem">' +
     '<div><strong>Invoice:</strong> ' + o.id + '</div><div><strong>Date:</strong> ' + formatDate(o.created_at) + '</div>' +
@@ -4078,15 +4078,15 @@ async function deleteProduct(id) {
 var chatOpen = false;
 var chatHistory = [];
 var BOT = {
-  greet: ['Hey gorgeous! 💜 I\'m your Rae support assistant. How can I help?','Hello beautiful! \u2728 Need help with an order, deals, or anything else?'],
+  greet: ['Hey gorgeous! 💜 I\'m your Rae support assistant. How can I help?','Hello beautiful or handsome! \u2728 Need help with an order, deals, or anything else?'],
   deals: ['🔥 Flash deals are live right now — up to 70% OFF! Check the countdown on the homepage.','✨ Best deals are in Fashion & Beauty. Use the category filter to browse!'],
   track: ['📦 Track your orders in My Account → My Orders. You\'ll see a live progress bar for each order!','Go to the Orders tab in your bottom menu to track any order in real-time 💜'],
   referral: ['🎁 Share your referral link and earn ₦1,000 for every ₦10K purchase your friend makes — and ₦10,000 for ₦100K!','Visit the Referral section in your dashboard to get your unique link and share via WhatsApp 💜'],
-  payment: ['💳 Transfer to OPay account: 8166666667 (Rae Enterprises). Upload your payment screenshot when checking out.','We accept bank transfers. After payment, upload proof and orders are approved within 24hrs \u2728'],
-  support: ['📞 Call or WhatsApp us: 08117706203. We\'re always available for you 💜','Tap the Call or WhatsApp buttons at the bottom of the homepage anytime!'],
+  payment: ['💳 Transfer to OPay account: 6549997465  (lindley or Rae Enterprises). Upload your payment screenshot when checking out.','We accept bank transfers. After payment, upload proof and orders are approved within 24hrs \u2728'],
+  support: ['📞 Call or WhatsApp us: 07055902601 or raeenterprise@gmail.com   . We\'re always available for you 💜','Tap the Call or WhatsApp buttons at the bottom of the homepage anytime!'],
   wallet: ['💰 Your wallet earns from referral rewards and admin bonuses. Use it to pay for orders instantly — no transfer needed!','Wallet credits never expire and can be used on any purchase. Check your balance in the Wallet tab \u2728'],
   size: ['👗 Select your size on the product page before adding to cart. Available sizes: S, M, L, XL for clothing and 39-45 for shoes.','Size options appear on each product page. Your selected size is saved with your order \u2728'],
-  fallback: ['I\'m not sure about that 💔 I can help with: deals, orders, payment, referrals, sizes, or support!','Try asking about our deals, tracking orders, or our referral program 💜','For more help, contact us on 08117706203 or WhatsApp!']
+  fallback: ['I\'m not sure about that 💔 I can help with: deals, orders, payment, referrals, sizes, or support!','Try asking about our deals, tracking orders, or our referral program 💜','For more help, contact us on 07055902601 or WhatsApp!']
 };
 
 function renderChatbot() {
