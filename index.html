@@ -2026,11 +2026,25 @@ function submitAdminModal() {
 
 // RAE ENTERPRISE — Home Page (fully featured)
 
-var CATEGORIES = [
-  {icon:'✨',label:'All'}, {icon:'👗',label:'Fashion'}, {icon:'💄',label:'Beauty'},
-  {icon:'📱',label:'Tech'}, {icon:'🏠',label:'Home'}, {icon:'👟',label:'Shoes'},
-  {icon:'💎',label:'Accessories'}, {icon:'🎁',label:'Gifts'}
-];
+// Always reads from localStorage so admin-added categories reflect immediately
+function getCategories() {
+  var defaults = ['Fashion','Beauty','Tech','Home','Shoes','Accessories','Gifts','Jewelry','Kids','Sports','Electronics'];
+  var stored = null;
+  try { stored = JSON.parse(localStorage.getItem('rae_categories') || 'null'); } catch(e){}
+  var cats = stored || defaults;
+  var ICONS = {
+    'Fashion':'&#128248;','Beauty':'&#128132;','Tech':'&#128241;','Home':'&#127968;',
+    'Shoes':'&#128209;','Accessories':'&#128142;','Gifts':'&#127873;','Jewelry':'&#128142;',
+    'Kids':'&#128102;','Sports':'&#127937;','Electronics':'&#128268;','Food':'&#127829;',
+    'Books':'&#128218;','Art':'&#127912;','Music':'&#127925;','Clothing':'&#128248;',
+    'Bags':'&#128080;','Watches':'&#8987;','Perfume':'&#128138;','Hair':'&#128141;'
+  };
+  var result = [{icon:'&#10024;', label:'All'}];
+  cats.forEach(function(cat) {
+    result.push({icon: ICONS[cat] || '&#127800;', label: cat});
+  });
+  return result;
+}
 
 var homeCategory = 'All';
 var flashEndTime = Date.now() + 4 * 60 * 60 * 1000;
@@ -2091,7 +2105,7 @@ async function renderHome() {
     '<h2 class="section-title text-center">Shop by <span class="text-gradient">Category</span></h2>' +
     '<p class="section-sub text-center">Find exactly what you\'re looking for 💅</p>' +
     '<div class="category-pills">' +
-    CATEGORIES.map(function(c) {
+    getCategories().map(function(c) {
       return '<div class="category-pill '+(c.label===homeCategory?'active':'')+'" onclick="filterCategory(\''+c.label+'\')">'+c.icon+' '+c.label+'</div>';
     }).join('') +
     '</div></div></section>' +
@@ -2186,7 +2200,7 @@ async function loadProducts(reset) {
 
 function productCardHTML(p) {
   var discount = getDiscount(p.price, p.discount_price);
-  var img = (p.images && p.images[0]) || 'https://placehold.co/400x400/7B2EFF/fff?text=✨';
+  var img = (p.images && p.images[0]) || 'https://placehold.co/400x400/7B2EFF/fff?text=R';
   var stars = '★★★★' + (Math.random()>0.5?'★':'☆');
   var reviews = Math.floor(20 + Math.random()*200);
   var stock = p.stock_count || 0;
@@ -3826,7 +3840,14 @@ function addCategory() {
   if (cats.indexOf(val)===-1) { cats.push(val); localStorage.setItem('rae_categories',JSON.stringify(cats)); }
   if (input) input.value = '';
   renderCategoriesTab(document.getElementById('admin-content'));
-  toast('"' + val + '" added!');
+  // Also update product form category dropdown if open
+  var pfCat = document.getElementById('pf-cat');
+  if (pfCat) {
+    var opt = document.createElement('option');
+    opt.value = val; opt.textContent = val;
+    pfCat.appendChild(opt);
+  }
+  toast('"' + val + '" added! Visible on shop now.');
 }
 
 function removeCategory(cat) {
@@ -3925,23 +3946,39 @@ function toggleUrlSection() {
   if (arrow) arrow.textContent = open ? '\u25bc' : '\u25b2';
 }
 
+function compressImage(file, maxW, quality, callback) {
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = new Image();
+    img.onload = function() {
+      var canvas = document.createElement('canvas');
+      var scale = Math.min(1, maxW / Math.max(img.width, img.height));
+      canvas.width  = Math.round(img.width  * scale);
+      canvas.height = Math.round(img.height * scale);
+      var ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      callback(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
 function handleImgUpload(input, i) {
   var file = input.files[0]; if (!file) return;
   window._slotFiles[i] = file;
-  // Use object URL for instant preview without size limits
-  var objUrl = URL.createObjectURL(file);
-  window._slotPreviewUrls = window._slotPreviewUrls || [null,null,null];
-  // Revoke old object URL
-  if (window._slotPreviewUrls[i]) { try { URL.revokeObjectURL(window._slotPreviewUrls[i]); } catch(e){} }
-  window._slotPreviewUrls[i] = objUrl;
-  window._slotImgs[i] = ''; // will be set after upload
-  var slot = document.getElementById('slot-' + i);
-  if (slot) {
-    slot.innerHTML = '<img src="' + objUrl + '" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0" />' +
-      '<div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.7));padding:6px 4px 4px;text-align:center;font-size:0.65rem;color:#fff">Ready to upload</div>';
-  }
-  var clr = document.getElementById('clr-' + i); if (clr) clr.style.display = 'flex';
-  var urlF = document.getElementById('pf-url-' + i); if (urlF) urlF.value = '';
+  // Compress then store as base64 - keeps size small enough for DB
+  compressImage(file, 800, 0.75, function(b64) {
+    window._slotImgs[i] = b64;
+    var slot = document.getElementById('slot-' + i);
+    if (slot) {
+      slot.innerHTML =
+        '<img src="' + b64 + '" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0" />' +
+        '<div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.7));padding:6px 4px 4px;text-align:center;font-size:0.65rem;color:#fff">&#10003; Selected</div>';
+    }
+    var clr = document.getElementById('clr-' + i); if (clr) clr.style.display = 'flex';
+    var urlF = document.getElementById('pf-url-' + i); if (urlF) urlF.value = '';
+  });
 }
 
 function clearSlot(i) {
@@ -3984,8 +4021,11 @@ async function saveProduct(e, existingId) {
           var pub = db.storage.from('product-images').getPublicUrl(path);
           if (pub.data && pub.data.publicUrl) { finalImgs.push(pub.data.publicUrl); continue; }
         }
-      } catch(uploadErr) {
-        toast('Image upload failed. Please set up "product-images" bucket in Supabase Storage (public).','warn');
+      } catch(uploadErr) { /* storage not set up, fall through to base64 */ }
+      // Fallback: save base64 directly - always works, no bucket needed
+      if (window._slotImgs && window._slotImgs[i] && window._slotImgs[i].length > 10) {
+        finalImgs.push(window._slotImgs[i]);
+        continue;
       }
     } else if (urlVal && urlVal.startsWith('http')) {
       finalImgs.push(urlVal);
